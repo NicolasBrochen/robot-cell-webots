@@ -1,0 +1,186 @@
+#VRML_SIM R2025a utf8
+# template language: javascript
+# 6-axis articulated arm with spherical wrist and a two-finger parallel gripper.
+# Zero pose: upper arm vertical, forearm horizontal along +x.
+#   J1 z @ (0,0,0.04)  J2 y @ shoulder z = 0.30  J3 y @ elbow z = 0.65
+#   J4 x (forearm roll)  J5 y (wrist pitch, 0.30 m from the elbow)  J6 x (flange roll)
+# Finger centre in the zero pose: (0.405, 0, 0.65), gripper rotated -90 deg about y.
+# Devices: joint1..joint6, finger_left, finger_right (+ *_sensor), emitter, receiver.
+# Own procedural model, no vendor CAD.
+
+PROTO Arm6Dof [
+  field SFVec3f    translation      0 0 0
+  field SFRotation rotation         0 0 1 0
+  field SFString   name             "arm6"
+  field SFString   controller       "<none>"
+  field MFString   controllerArgs   []
+  field SFBool     supervisor       FALSE
+  field MFFloat    initialPosition  [0 0 0 0 0 0]   # J1..J6
+  field SFFloat    transparency     0               # visual only
+  field SFBool     showJointFrames  FALSE           # X red, Y green, Z blue
+  field SFInt32    emitterChannel   2
+  field SFInt32    receiverChannel  1
+]
+{
+  %<
+    const q = fields.initialPosition.value.concat([0, 0, 0, 0, 0, 0]);
+    const tr = fields.transparency.value;
+    function app(c, rough, metal) {
+      return `PBRAppearance { baseColor ${c} roughness ${rough} metalness ${metal} transparency ${tr} }`;
+    }
+    function frame(dz, L = 0.16, w = 0.007) {
+      if (!fields.showJointFrames.value) return '';
+      const bar = (t, s, c) => `Pose { translation ${t} children [ Shape { castShadows FALSE appearance PBRAppearance { baseColor ${c} emissiveColor ${c} roughness 1 metalness 0 } geometry Box { size ${s} } } ] }`;
+      return `Pose { translation 0 0 ${dz} children [ ${bar(`${L / 2} 0 0`, `${L} ${w} ${w}`, '1 0 0')} ${bar(`0 ${L / 2} 0`, `${w} ${L} ${w}`, '0 0.9 0')} ${bar(`0 0 ${L / 2}`, `${w} ${w} ${L}`, '0 0.3 1')} ] }`;
+    }
+    const DARK = app('0.18 0.18 0.2', 0.5, 0.3);
+    const BLUE = app('0.15 0.35 0.75', 0.4, 0.2);
+    const WHITE = app('0.9 0.9 0.92', 0.35, 0.1);
+    const ALONG_X = 'rotation 0 1 0 1.5708';
+    const ALONG_Y = 'rotation 1 0 0 1.5708';
+    function physics(mass, com, inertia) {
+      return `Physics { density -1 mass ${mass} centerOfMass [ ${com} ] inertiaMatrix [ ${inertia}, 0 0 0 ] }`;
+    }
+  >%
+  Robot {
+    translation IS translation
+    rotation IS rotation
+    name IS name
+    controller IS controller
+    controllerArgs IS controllerArgs
+    supervisor IS supervisor
+    children [
+      Emitter { name "emitter" channel IS emitterChannel }
+      Receiver { name "receiver" channel IS receiverChannel }
+      Pose { translation 0 0 0.02 children [ Shape { appearance %<= DARK >% geometry Cylinder { radius 0.14 height 0.04 } } ] }
+      HingeJoint {
+        jointParameters HingeJointParameters { position %<= q[0] >% axis 0 0 1 anchor 0 0 0.04 }
+        device [ RotationalMotor { name "joint1" maxVelocity 3 maxTorque 500 } PositionSensor { name "joint1_sensor" } ]
+        endPoint Solid {
+          name "turret"
+          translation 0 0 0.04
+          rotation 0 0 1 %<= q[0] >%
+          physics %<= physics(3, '0 0 0.12', '0.02 0.02 0.01') >%
+          children [
+            Pose { translation 0 0 0.11 children [ Shape { appearance %<= BLUE >% geometry Cylinder { radius 0.08 height 0.22 } } ] }
+            Pose { translation 0 0 0.26 %<= ALONG_Y >% children [ Shape { appearance %<= DARK >% geometry Cylinder { radius 0.07 height 0.17 } } ] }
+            %<= frame(0) >%
+            HingeJoint {
+              jointParameters HingeJointParameters { position %<= q[1] >% axis 0 1 0 anchor 0 0 0.26 }
+              device [ RotationalMotor { name "joint2" maxVelocity 3 maxTorque 500 } PositionSensor { name "joint2_sensor" } ]
+              endPoint Solid {
+                name "upper arm"
+                translation 0 0 0.26
+                rotation 0 1 0 %<= q[1] >%
+                physics %<= physics(2, '0 0 0.175', '0.025 0.025 0.003') >%
+                children [
+                  Pose { translation 0 0 0.175 children [ Shape { appearance %<= WHITE >% geometry Box { size 0.08 0.08 0.35 } } ] }
+                  Pose { translation 0 0 0.35 %<= ALONG_Y >% children [ Shape { appearance %<= DARK >% geometry Cylinder { radius 0.06 height 0.13 } } ] }
+                  %<= frame(0) >%
+                  HingeJoint {
+                    jointParameters HingeJointParameters { position %<= q[2] >% axis 0 1 0 anchor 0 0 0.35 }
+                    device [ RotationalMotor { name "joint3" maxVelocity 3 maxTorque 500 } PositionSensor { name "joint3_sensor" } ]
+                    endPoint Solid {
+                      name "forearm 1"
+                      translation 0 0 0.35
+                      rotation 0 1 0 %<= q[2] >%
+                      physics %<= physics(1, '0.075 0 0', '0.001 0.003 0.003') >%
+                      children [
+                        Pose { translation 0.075 0 0 %<= ALONG_X >% children [ Shape { appearance %<= WHITE >% geometry Cylinder { radius 0.045 height 0.15 } } ] }
+                        %<= frame(0) >%
+                        HingeJoint {
+                          jointParameters HingeJointParameters { position %<= q[3] >% axis 1 0 0 anchor 0.15 0 0 }
+                          device [ RotationalMotor { name "joint4" maxVelocity 8 maxTorque 200 } PositionSensor { name "joint4_sensor" } ]
+                          endPoint Solid {
+                            name "forearm 2"
+                            translation 0.15 0 0
+                            rotation 1 0 0 %<= q[3] >%
+                            physics %<= physics(0.6, '0.075 0 0', '0.0005 0.0015 0.0015') >%
+                            children [
+                              Pose { translation 0.005 0 0 %<= ALONG_X >% children [ Shape { appearance %<= BLUE >% geometry Cylinder { radius 0.047 height 0.01 } } ] }
+                              Pose { translation 0.075 0 0 %<= ALONG_X >% children [ Shape { appearance %<= WHITE >% geometry Cylinder { radius 0.04 height 0.15 } } ] }
+                              Pose { translation 0.15 0 0 %<= ALONG_Y >% children [ Shape { appearance %<= DARK >% geometry Cylinder { radius 0.04 height 0.09 } } ] }
+                              %<= frame(0) >%
+                              HingeJoint {
+                                jointParameters HingeJointParameters { position %<= q[4] >% axis 0 1 0 anchor 0.15 0 0 }
+                                device [ RotationalMotor { name "joint5" maxVelocity 3 maxTorque 200 } PositionSensor { name "joint5_sensor" } ]
+                                endPoint Solid {
+                                  name "wrist"
+                                  translation 0.15 0 0
+                                  rotation 0 1 0 %<= q[4] >%
+                                  physics %<= physics(0.3, '0.02 0 0', '0.0002 0.0002 0.0002') >%
+                                  children [
+                                    Pose { translation 0.02 0 0 %<= ALONG_X >% children [ Shape { appearance %<= BLUE >% geometry Cylinder { radius 0.03 height 0.04 } } ] }
+                                    %<= frame(0) >%
+                                    HingeJoint {
+                                      jointParameters HingeJointParameters { position %<= q[5] >% axis 1 0 0 anchor 0.04 0 0 }
+                                      device [ RotationalMotor { name "joint6" maxVelocity 8 maxTorque 200 } PositionSensor { name "joint6_sensor" } ]
+                                      endPoint Solid {
+                                        name "flange"
+                                        translation 0.04 0 0
+                                        rotation 1 0 0 %<= q[5] >%
+                                        physics %<= physics(0.1, '0.008 0 0', '0.0001 0.0001 0.0001') >%
+                                        children [
+                                          Pose { translation 0.0075 0 0 %<= ALONG_X >% children [ Shape { appearance %<= DARK >% geometry Cylinder { radius 0.035 height 0.015 } } ] }
+                                          %<= frame(0) >%
+                                          DEF TOOL Solid {
+                                            name "gripper"
+                                            translation 0.03 0 0
+                                            rotation 0 1 0 -1.5708
+                                            physics %<= physics(0.15, '0 0 0', '0.0002 0.0002 0.0002') >%
+                                            boundingObject Box { size 0.1 0.04 0.03 }
+                                            children [
+                                              Shape { appearance %<= app('0.15 0.15 0.15', 0.5, 0.2) >% geometry Box { size 0.1 0.04 0.03 } }
+                                              SliderJoint {
+                                                jointParameters JointParameters { axis 1 0 0 }
+                                                device [
+                                                  LinearMotor { name "finger_left" maxVelocity 0.1 maxForce 10 minPosition 0 maxPosition 0.025 }
+                                                  PositionSensor { name "finger_left_sensor" }
+                                                ]
+                                                endPoint DEF FINGER_L Solid {
+                                                  name "finger left"
+                                                  translation -0.035 0 -0.035
+                                                  contactMaterial "finger"
+                                                  physics %<= physics(0.02, '0 0 0', '0.00001 0.00001 0.00001') >%
+                                                  children [ Shape { appearance %<= app('0.8 0.1 0.1', 0.5, 0) >% geometry Box { size 0.01 0.03 0.04 } } ]
+                                                  boundingObject Box { size 0.01 0.03 0.04 }
+                                                }
+                                              }
+                                              SliderJoint {
+                                                jointParameters JointParameters { axis -1 0 0 }
+                                                device [
+                                                  LinearMotor { name "finger_right" maxVelocity 0.1 maxForce 10 minPosition 0 maxPosition 0.025 }
+                                                  PositionSensor { name "finger_right_sensor" }
+                                                ]
+                                                endPoint DEF FINGER_R Solid {
+                                                  name "finger right"
+                                                  translation 0.035 0 -0.035
+                                                  contactMaterial "finger"
+                                                  physics %<= physics(0.02, '0 0 0', '0.00001 0.00001 0.00001') >%
+                                                  children [ Shape { appearance %<= app('0.8 0.1 0.1', 0.5, 0) >% geometry Box { size 0.01 0.03 0.04 } } ]
+                                                  boundingObject Box { size 0.01 0.03 0.04 }
+                                                }
+                                              }
+                                            ]
+                                          }
+                                        ]
+                                      }
+                                    }
+                                  ]
+                                }
+                              }
+                            ]
+                          }
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

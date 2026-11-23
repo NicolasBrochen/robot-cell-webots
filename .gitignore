@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+*.pyc
+tests/results/
+# temporary worlds written by the test / site scripts and by webotMCP
+worlds/.*
+*.bak
+# controllers copied into the project by webotMCP (launch_webots auto-install)
+controllers/mcp_bridge/
+controllers/mcp_robot/
+site/.build.log
+.DS_Store

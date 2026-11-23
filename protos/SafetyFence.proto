@@ -1,0 +1,48 @@
+#VRML_SIM R2025a utf8
+# template language: javascript
+# Safety fence (visual only): transparent panels, yellow top rails, dark posts, floor marking.
+# Rectangle size x size, 0.9 m high, with an opening in the +y side for the infeed conveyor.
+
+PROTO SafetyFence [
+  field SFVec3f  translation    0 0 0
+  field SFVec2f  size           2.2 1.5
+  field SFFloat  height         0.9
+  field SFFloat  openingCenterX -0.3   # local x of the conveyor opening on the +y side
+  field SFFloat  openingWidth   0.2
+  field SFFloat  openingHeight  0.4    # opening clear height (panel above it)
+]
+{
+  %<
+    const [X, Y] = [fields.size.value.x, fields.size.value.y];
+    const H = fields.height.value;
+    const oc = fields.openingCenterX.value, ow = fields.openingWidth.value, oh = fields.openingHeight.value;
+    const PANEL = 'PBRAppearance { baseColor 0.95 0.85 0.3 roughness 0.5 metalness 0 transparency 0.88 }';
+    const RAIL = 'PBRAppearance { baseColor 1 0.8 0.05 roughness 0.5 metalness 0.3 }';
+    const POST = 'PBRAppearance { baseColor 0.15 0.15 0.15 roughness 0.5 metalness 0.3 }';
+    function box(t, s, app) {
+      return `Pose { translation ${t} children [ Shape { castShadows FALSE appearance ${app} geometry Box { size ${s} } } ] }`;
+    }
+    const left = oc - ow / 2 + X / 2, right = X / 2 - (oc + ow / 2);
+  >%
+  Pose {
+    translation IS translation
+    children [
+      %<= box(`${-X / 2 + left / 2} ${Y / 2} ${H / 2}`, `${left} 0.005 ${H}`, PANEL) >%
+      %<= box(`${X / 2 - right / 2} ${Y / 2} ${H / 2}`, `${right} 0.005 ${H}`, PANEL) >%
+      %<= box(`${oc} ${Y / 2} ${oh + (H - oh) / 2}`, `${ow} 0.005 ${H - oh}`, PANEL) >%
+      %<= box(`0 ${-Y / 2} ${H / 2}`, `${X} 0.005 ${H}`, PANEL) >%
+      %<= box(`${-X / 2} 0 ${H / 2}`, `0.005 ${Y} ${H}`, PANEL) >%
+      %<= box(`${X / 2} 0 ${H / 2}`, `0.005 ${Y} ${H}`, PANEL) >%
+      %<= box(`0 ${Y / 2} ${H}`, `${X} 0.03 0.03`, RAIL) >%
+      %<= box(`0 ${-Y / 2} ${H}`, `${X} 0.03 0.03`, RAIL) >%
+      %<= box(`${-X / 2} 0 ${H}`, `0.03 ${Y} 0.03`, RAIL) >%
+      %<= box(`${X / 2} 0 ${H}`, `0.03 ${Y} 0.03`, RAIL) >%
+      %<= box(`${oc} ${Y / 2} ${oh}`, `${ow} 0.03 0.03`, RAIL) >%
+      %< for (const [px, py] of [[X / 2, Y / 2], [X / 2, -Y / 2], [-X / 2, Y / 2], [-X / 2, -Y / 2], [oc - ow / 2, Y / 2], [oc + ow / 2, Y / 2], [0, -Y / 2]]) { >%
+        %<= box(`${px} ${py} ${H / 2}`, `0.04 0.04 ${H}`, POST) >%
+      %< } >%
+      %<= box('0 0 0.001', `${X - 0.02} ${Y - 0.02} 0.001`, 'PBRAppearance { baseColor 0.95 0.8 0.1 roughness 1 metalness 0 }') >%
+      %<= box('0 0 0.002', `${X - 0.14} ${Y - 0.14} 0.001`, 'PBRAppearance { baseColor 0.32 0.33 0.35 roughness 1 metalness 0 }') >%
+    ]
+  }
+}

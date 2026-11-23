@@ -1,0 +1,10 @@
+{
+  "name": "Throughput: one cube every 14.4 s from the conveyor to the bin, none on the floor, no robot collision",
+  "duration": 75,
+  "checks": [
+    { "metric": "delivered", "min": 5 },
+    { "metric": "starts", "min": 5 },
+    { "metric": "cubes_on_floor", "max": 0 },
+    { "metric": "robot_contacts", "max": 0 }
+  ]
+}

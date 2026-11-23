@@ -1,0 +1,10 @@
+{
+  "name": "Hand-over: the cube stays centred in both grippers and never slips into the 6-axis palm",
+  "duration": 45,
+  "checks": [
+    { "metric": "delivered", "min": 2 },
+    { "metric": "handover_offset_mm", "max": 1.5 },
+    { "metric": "arm6_cube_slip_mm", "max": 3.0 },
+    { "metric": "arm6_palm_gap_min_mm", "min": -0.5 }
+  ]
+}

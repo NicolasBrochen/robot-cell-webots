@@ -1,0 +1,13 @@
+{
+  "name": "Presence interlock: the robots never start without a cube at the end stop and stay idle when the infeed runs dry",
+  "duration": 70,
+  "actions": [
+    { "at": 20.0, "do": "starve" }
+  ],
+  "checks": [
+    { "metric": "starts", "min": 2 },
+    { "metric": "starts_without_cube", "max": 0 },
+    { "metric": "starts_after_starve", "max": 0 },
+    { "metric": "cubes_on_floor", "max": 0 }
+  ]
+}

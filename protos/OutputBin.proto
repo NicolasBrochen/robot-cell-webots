@@ -1,0 +1,41 @@
+#VRML_SIM R2025a utf8
+# template language: javascript
+# Open output bin (0.25 m square, 0.14 m high). Origin at the centre of the floor of the bin.
+
+PROTO OutputBin [
+  field SFVec3f    translation  0 0 0
+  field SFRotation rotation     0 0 1 0
+  field SFString   name         "output bin"
+  field SFFloat    size         0.25
+  field SFFloat    height       0.14
+  field SFColor    color        0.2 0.35 0.65
+]
+{
+  %<
+    const s = fields.size.value, h = fields.height.value, t = 0.01, f = 0.02;
+    const parts = [
+      [`0 0 ${f / 2}`, `${s} ${s} ${f}`],
+      [`${s / 2 - t / 2} 0 ${f + (h - f) / 2}`, `${t} ${s} ${h - f}`],
+      [`${-s / 2 + t / 2} 0 ${f + (h - f) / 2}`, `${t} ${s} ${h - f}`],
+      [`0 ${s / 2 - t / 2} ${f + (h - f) / 2}`, `${s} ${t} ${h - f}`],
+      [`0 ${-s / 2 + t / 2} ${f + (h - f) / 2}`, `${s} ${t} ${h - f}`],
+    ];
+  >%
+  Solid {
+    translation IS translation
+    rotation IS rotation
+    name IS name
+    children [
+      %< for (const [tr, sz] of parts) { >%
+        Pose { translation %<= tr >% children [ Shape { appearance PBRAppearance { baseColor IS color roughness 0.6 metalness 0.1 } geometry Box { size %<= sz >% } } ] }
+      %< } >%
+    ]
+    boundingObject Group {
+      children [
+        %< for (const [tr, sz] of parts) { >%
+          Pose { translation %<= tr >% children [ Box { size %<= sz >% } ] }
+        %< } >%
+      ]
+    }
+  }
+}
