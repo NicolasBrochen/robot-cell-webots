@@ -1,4 +1,4 @@
-[English](README.en.md) · **Français**
+[English](README.md) · **Français**
 
 # Cellule robotisée SCARA + bras 6 axes avec passage de main, dans Webots
 

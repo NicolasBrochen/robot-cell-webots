@@ -1,4 +1,4 @@
-**English** · [Français](README.md)
+**English** · [Français](README.fr.md)
 
 # SCARA + 6-axis robot cell with an in-air hand-over, in Webots
 
