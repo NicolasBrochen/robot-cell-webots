@@ -46,7 +46,7 @@ def build():
     colors = ["0.9 0.75 0.1", "0.1 0.75 0.85", "0.85 0.2 0.6"]
     cubes = []
     for k, c in enumerate(colors):
-        pos = f"{I[0]} {I[1]} {BELT_TOP + CUBE / 2 + 0.0002:.4f}" if k == 0 else f"{10.0 + 0.1 * k:.1f} 10 0.0205"
+        pos = f"{I[0]} {I[1]} {BELT_TOP + CUBE / 2 + 0.0002:.4f}" if k == 0 else f"{10.0 + 0.1 * k:.1f} 10 -1.0795"
         cubes.append(
             f'DEF CUBE_{k} Solid {{\n  translation {pos}\n  name "cube {k}"\n  contactMaterial "cube"\n'
             f'  children [ Shape {{ appearance PBRAppearance {{ baseColor {c} roughness 0.5 metalness 0 }} '
@@ -62,7 +62,7 @@ EXTERNPROTO "{WEBOTS}/devices/robotiq/protos/Robotiq2f85Gripper.proto"
 EXTERNPROTO "../protos/FanucLrMate200iD.proto"
 EXTERNPROTO "../protos/BeltConveyor.proto"
 EXTERNPROTO "../protos/OutputBin.proto"
-EXTERNPROTO "../protos/SafetyFence.proto"
+EXTERNPROTO "../protos/MobilePlexiCell.proto"
 
 WorldInfo {{
   info [ "FANUC LR Mate 200iD + UR5e hand-over cell, one 50 g cube every 14.4 s" ]
@@ -75,18 +75,20 @@ WorldInfo {{
   ]
 }}
 Viewpoint {{
-  orientation -0.29465 0.12813 0.94698 2.36032
-  position 2.55 -1.95 2.25
+  orientation -0.24 0.15 0.96 2.38
+  position 3.8 -2.9 1.40
 }}
-Background {{ skyColor [ 0.6 0.62 0.65 ] }}
-DirectionalLight {{ direction -0.4 -0.6 -1 intensity 2 castShadows TRUE }}
-DirectionalLight {{ direction 0.5 0.4 -0.8 intensity 0.6 }}
+Background {{ skyColor [ 0.82 0.86 0.92 ] }}
+DirectionalLight {{ direction -0.4 -0.6 -1 intensity 2.4 castShadows TRUE }}
+DirectionalLight {{ direction 0.5 0.4 -0.6 intensity 1.0 }}
+DirectionalLight {{ direction 0.0 -0.8 -0.3 intensity 0.5 }}
 DEF FLOOR Solid {{
+  translation 0 0 -1.10
   name "floor"
-  children [ Shape {{ appearance PBRAppearance {{ baseColor 0.55 0.56 0.58 roughness 1 metalness 0 }} geometry DEF FLOOR_GEO Plane {{ size 6 6 }} }} ]
+  children [ Shape {{ appearance PBRAppearance {{ baseColor 0.20 0.22 0.25 roughness 0.35 metalness 0.15 }} geometry DEF FLOOR_GEO Plane {{ size 10 10 }} }} ]
   boundingObject USE FLOOR_GEO
 }}
-SafetyFence {{ translation 0.6 0 0 }}
+MobilePlexiCell {{ translation 0.50 -0.05 0 size 1.70 1.25 height 1.15 floorZ -1.10 shelfZ -0.85 openingCenterX {I[0] - 0.50:.2f} openingWidth 0.22 openingHeight 0.44 door TRUE doorWidth 0.72 doorCenterX -0.05 }}
 DEF FANUC FanucLrMate200iD {{
   translation {FANUC_BASE[0]} {FANUC_BASE[1]} {FANUC_BASE[2]}
   rotation 0 0 1 {FANUC_YAW:.5f}

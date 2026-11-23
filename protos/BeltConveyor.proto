@@ -1,13 +1,12 @@
 #VRML_SIM R2025a utf8
 # template language: javascript
 # Belt conveyor with end stop, side guides, moving slats and a through-beam presence sensor.
-# Origin = centre of a cube resting against the end stop, on the floor; the belt runs along -y
+# Origin = centre of a cube resting against the end stop, on the floor/table; the belt runs along -y
 # towards the origin, belt top at z = 0.35 m. The robot node hosts the cell PLC controller
 # (controllers/conveyor), which drives the cubes, animates the slats given in the `slats` field
 # (DEF SLAT_0..SLAT_n, world-level nodes so that the supervisor may move them) and reads the
 # sensor "presence_butee".
-# Devices: presence_butee (DistanceSensor, ray along -x across the stop, 7 mm above the belt so that
-# a gripper grasping the cube at the stop passes above it), emitter, receiver.
+# Supports elevated workstations: front legs rest on the cart table (z = 0), rear legs extend to floorZ.
 
 PROTO BeltConveyor [
   field SFVec3f    translation      0 0 0
@@ -18,10 +17,15 @@ PROTO BeltConveyor [
   field MFNode     slats            []    # belt slats (Pose nodes, DEF SLAT_0..n), animated by the controller
   field SFInt32    emitterChannel   1
   field SFInt32    receiverChannel  2
+  field SFFloat    floorZ           -1.10 # workshop floor level for external legs
+  field SFFloat    tableCutoffY     0.225 # conveyor local y where the cart table ends
 ]
 {
   %<
+    const FZ = fields.floorZ.value;
+    const cutoff = fields.tableCutoffY.value;
     const METAL = 'PBRAppearance { baseColor 0.55 0.57 0.6 roughness 0.35 metalness 0.8 }';
+    const FOOT  = 'PBRAppearance { baseColor 0.18 0.18 0.20 roughness 0.7 metalness 0.4 }';
     function box(t, s, app) {
       return `Pose { translation ${t} children [ Shape { appearance ${app} geometry Box { size ${s} } } ] }`;
     }
@@ -41,9 +45,31 @@ PROTO BeltConveyor [
       %< for (const sx of [-1, 1]) { >%
         %<= box(`${0.06 * sx} 0.54 0.325`, '0.02 1.16 0.06', METAL) >%
         %<= box(`${0.03 * sx} 0.575 0.354`, '0.005 1.05 0.008', 'PBRAppearance { baseColor 1 0.55 0.05 roughness 0.5 metalness 0.2 }') >%
-        %< for (const y of [0.07, 0.54, 1.01]) { >%
-          %<= box(`${0.06 * sx} ${y} 0.15`, '0.03 0.03 0.30', METAL) >%
+      %< } >%
+      %< for (const y of [0.07, 0.54, 1.01]) { >%
+        %<
+          const onTable = (y < cutoff);
+          const botZ = onTable ? 0.0 : FZ;
+          const legH = 0.30 - botZ;
+          const legMidZ = botZ + legH / 2;
+        >%
+        %< for (const sx of [-1, 1]) { >%
+          %<= box(`${0.06 * sx} ${y} ${legMidZ}`, `0.035 0.035 ${legH}`, METAL) >%
+          %< if (!onTable) { >%
+            %<= box(`${0.06 * sx} ${y} ${botZ + 0.01}`, '0.07 0.07 0.02', FOOT) >%
+          %< } >%
         %< } >%
+        %< if (!onTable) { >%
+          %<= box(`0 ${y} ${botZ + legH * 0.35}`, '0.085 0.025 0.025', METAL) >%
+        %< } >%
+      %< } >%
+      %<
+        const outerBotZ = FZ;
+        const outerLegH = 0.30 - outerBotZ;
+        const barZ = outerBotZ + outerLegH * 0.35;
+      >%
+      %< for (const sx of [-1, 1]) { >%
+        %<= box(`${0.06 * sx} 0.775 ${barZ}`, '0.025 0.44 0.025', METAL) >%
       %< } >%
       %< for (const y of [-0.02, 1.10]) { >%
         Pose { translation 0 %<= y >% 0.33 rotation 0 1 0 1.5708 children [ Shape { appearance %<= METAL >% geometry Cylinder { radius 0.021 height 0.1 } } ] }

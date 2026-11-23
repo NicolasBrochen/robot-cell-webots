@@ -33,7 +33,8 @@ own SCARA and 6-axis models, is tagged [`v1.0`](../../tree/v1.0).
 | 2 × Robotiq 2F-85 | official Webots PROTO, mounted in the toolSlots | two-finger adaptive grippers (85 mm stroke) |
 | Infeed conveyor | [`protos/BeltConveyor.proto`](protos/BeltConveyor.proto) | 1.12 m belt at 0.15 m/s, side guides, end stop, through-beam sensor 7 mm above the belt |
 | Cubes | world | 40 mm, 50 g, 3 in circulation (recycled from the bin back to the conveyor) |
-| Output bin, fence | [`protos/OutputBin.proto`](protos/OutputBin.proto), [`protos/SafetyFence.proto`](protos/SafetyFence.proto) | |
+| Mobile cell cart | [`protos/MobilePlexiCell.proto`](protos/MobilePlexiCell.proto) | industrial mobile workstation constructed from T-slotted aluminum extrusion profiles (45×45 mm / 40×40 mm) with corner gusset brackets, 4 caster wheels with brakes, lower shelf hosting both robot power supplies / controllers (FANUC R-30iB Mate Plus & UR5e Control Box) and Teach Pendants (FANUC iPendant & UR PolyScope tablet), tooling tabletop, transparent plexiglass enclosure (6 mm polycarbonate), front hinged door with interlock, and emergency stop console |
+| Output bin | [`protos/OutputBin.proto`](protos/OutputBin.proto) | |
 
 ### The hand-over
 

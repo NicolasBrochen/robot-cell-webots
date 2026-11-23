@@ -1,0 +1,395 @@
+#VRML_SIM R2025a utf8
+# template language: javascript
+# Mobile robot workstation cell on heavy-duty caster wheels with transparent plexiglass panels.
+# Constructed from industrial T-slotted aluminum extrusion profiles (45x45 mm & 40x40 mm).
+# Both the lower shelf and the upper plexiglass box share the exact same length (X) and width (Y).
+# Features:
+# - Unified structural aluminum framing flush from bottom shelf to top box
+# - Lower technical shelf (étagère) with identical length X & width Y as the upper box:
+#   * FANUC R-30iB Mate Plus robot controller / power supply (cabinet with rotary disconnect & yellow banner)
+#   * Universal Robots UR5e Control Box (brushed stainless steel cabinet with illuminated power button)
+#   * FANUC iPendant teach pendant (yellow ergonomic body, screen, keypad, E-stop, cradle & cable)
+#   * Universal Robots Teach Pendant (12" PolyScope tablet with screen, E-stop, cradle & cable)
+# - 4 heavy-duty industrial swivel caster wheels directly under the 4 corner columns (z = -0.60 m)
+# - Workstation table at z = 0 where robots, conveyor and bin are mounted
+# - Upper crystal-clear transparent plexiglass panels (6 mm polycarbonate)
+# - Front hinged plexiglass door with handle and safety interlock switch
+# - Operator control pendant with Emergency Stop mushroom button & status indicator LEDs
+# - Rear opening cut-out for the infeed conveyor
+
+PROTO MobilePlexiCell [
+  field SFVec3f    translation      0 0 0
+  field SFRotation rotation         0 0 1 0
+  field SFVec2f    size             1.70 1.25         # identical outer footprint for shelf and box (x, y)
+  field SFFloat    height           1.15              # upper cage height above table
+  field SFFloat    floorZ           -1.10             # workshop floor level relative to tabletop
+  field SFFloat    shelfZ           -0.85             # lower shelf height relative to tabletop
+  field SFFloat    wheelRadius      0.05              # caster wheel radius (~100 mm diameter)
+  field SFFloat    profileSize      0.045             # structural alu profile section (45x45 mm)
+  field SFFloat    openingCenterX   -0.20             # conveyor opening centre (local x) on the +y side
+  field SFFloat    openingWidth     0.22              # conveyor opening width
+  field SFFloat    openingHeight    0.44              # conveyor opening clear height
+  field SFBool     door             TRUE              # front access door on the -y side
+  field SFFloat    doorWidth        0.72              # door clear width
+  field SFFloat    doorCenterX      -0.05             # door centre (local x) on the -y side
+]
+{
+  %<
+    const X = fields.size.value.x, Y = fields.size.value.y;
+    const H = fields.height.value;                    // top of upper cage: +1.15 m
+    const FZ = fields.floorZ.value;                   // floor level: -0.60 m
+    const SZ = fields.shelfZ.value;                   // shelf level: -0.45 m
+    const WR = fields.wheelRadius.value;              // wheel radius: 0.05 m
+    const PS = fields.profileSize.value;              // 0.045 m
+    const oc = fields.openingCenterX.value, ow = fields.openingWidth.value, oh = fields.openingHeight.value;
+    const hasDoor = fields.door.value;
+    const dw = fields.doorWidth.value, dc = fields.doorCenterX.value;
+
+    // --- Appearances ---------------------------------------------------------
+    // Anodized natural matte aluminum (structural profiles)
+    const ALU = 'PBRAppearance { baseColor 0.86 0.87 0.89 roughness 0.28 metalness 0.88 }';
+    // T-slot dark groove inside alu profiles
+    const TSLOT = 'PBRAppearance { baseColor 0.18 0.19 0.20 roughness 0.85 metalness 0.25 }';
+    // Die-cast aluminum corner brackets / gussets
+    const GUSSET = 'PBRAppearance { baseColor 0.78 0.79 0.81 roughness 0.38 metalness 0.82 }';
+    // Black plastic end-caps
+    const CAP = 'PBRAppearance { baseColor 0.14 0.14 0.15 roughness 0.6 metalness 0.2 }';
+    // Transparent crystal Plexiglas / Polycarbonate
+    const PLEXI = 'PBRAppearance { baseColor 0.88 0.94 1.0 roughness 0.03 metalness 0.05 transparency 0.88 }';
+    // Tabletop plate (anodized aluminum tooling plate)
+    const TABLE_MAT = 'PBRAppearance { baseColor 0.72 0.74 0.77 roughness 0.35 metalness 0.72 }';
+    // Lower shelf plate (brushed alu plate)
+    const SHELF_MAT = 'PBRAppearance { baseColor 0.68 0.70 0.73 roughness 0.38 metalness 0.68 }';
+    // Caster wheel tire (dark dense rubber)
+    const RUBBER = 'PBRAppearance { baseColor 0.12 0.12 0.13 roughness 0.9 metalness 0.05 }';
+    // Galvanized steel (caster forks, brackets, hinges)
+    const STEEL = 'PBRAppearance { baseColor 0.80 0.81 0.83 roughness 0.22 metalness 0.94 }';
+    // Safety Brake pedal (signal red)
+    const BRAKE = 'PBRAppearance { baseColor 0.88 0.10 0.10 roughness 0.35 metalness 0.2 }';
+    // Emergency Stop mushroom (bright red)
+    const ESTOP_RED = 'PBRAppearance { baseColor 0.94 0.05 0.05 roughness 0.25 metalness 0.1 }';
+    // E-Stop housing / FANUC Yellow (RAL 1023)
+    const FANUC_YEL = 'PBRAppearance { baseColor 0.96 0.80 0.05 roughness 0.35 metalness 0.1 }';
+    // Industrial dark grey cabinet sheet metal
+    const CAB_DARK = 'PBRAppearance { baseColor 0.22 0.23 0.25 roughness 0.5 metalness 0.5 }';
+    // UR Brushed stainless steel cabinet
+    const UR_STEEL = 'PBRAppearance { baseColor 0.82 0.83 0.85 roughness 0.25 metalness 0.92 }';
+    // UR Corporate Blue
+    const UR_BLUE = 'PBRAppearance { baseColor 0.08 0.42 0.78 roughness 0.35 metalness 0.2 }';
+    // Screen LCD display (glowing UI)
+    const SCREEN_UI = 'PBRAppearance { baseColor 0.15 0.28 0.46 roughness 0.18 emissiveColor 0.10 0.18 0.28 }';
+    const SCREEN_FANUC = 'PBRAppearance { baseColor 0.20 0.25 0.32 roughness 0.18 emissiveColor 0.08 0.14 0.20 }';
+    // Cable matte black
+    const CABLE = 'PBRAppearance { baseColor 0.10 0.10 0.11 roughness 0.8 metalness 0.1 }';
+    // LED green / white
+    const LED_GREEN = 'PBRAppearance { baseColor 0.1 0.9 0.2 roughness 0.2 emissiveColor 0.15 0.90 0.25 }';
+    const LED_WHITE = 'PBRAppearance { baseColor 0.9 0.9 0.9 roughness 0.2 emissiveColor 0.75 0.75 0.75 }';
+    // Door handle (black anodized)
+    const HANDLE = 'PBRAppearance { baseColor 0.18 0.18 0.20 roughness 0.3 metalness 0.7 }';
+
+    function box(t, s, app) {
+      return `Pose { translation ${t} children [ Shape { castShadows FALSE appearance ${app} geometry Box { size ${s} } } ] }\n`;
+    }
+    function cyl(t, r, h, app, rot) {
+      const rr = rot ? ` rotation ${rot}` : '';
+      return `Pose { translation ${t}${rr} children [ Shape { castShadows FALSE appearance ${app} geometry Cylinder { radius ${r} height ${h} } } ] }\n`;
+    }
+
+    // Helper: T-slotted aluminum profile with visible longitudinal slot lines
+    function aluProfile(t, s) {
+      let res = box(t, s, ALU);
+      const [tx, ty, tz] = t.split(' ').map(Number);
+      const [sx, sy, sz] = s.split(' ').map(Number);
+      const maxDim = Math.max(sx, sy, sz);
+      if (maxDim === sz && sz > 0.10) {
+        const slotW = 0.008;
+        res += box(`${tx} ${ty + sy/2} ${tz}`, `${slotW} 0.002 ${sz - 0.01}`, TSLOT);
+        res += box(`${tx} ${ty - sy/2} ${tz}`, `${slotW} 0.002 ${sz - 0.01}`, TSLOT);
+        res += box(`${tx + sx/2} ${ty} ${tz}`, `0.002 ${slotW} ${sz - 0.01}`, TSLOT);
+        res += box(`${tx - sx/2} ${ty} ${tz}`, `0.002 ${slotW} ${sz - 0.01}`, TSLOT);
+      } else if (maxDim === sx && sx > 0.10) {
+        const slotW = 0.008;
+        res += box(`${tx} ${ty + sy/2} ${tz}`, `${sx - 0.01} 0.002 ${slotW}`, TSLOT);
+        res += box(`${tx} ${ty - sy/2} ${tz}`, `${sx - 0.01} 0.002 ${slotW}`, TSLOT);
+        res += box(`${tx} ${ty} ${tz + sz/2}`, `${sx - 0.01} ${slotW} 0.002`, TSLOT);
+        res += box(`${tx} ${ty} ${tz - sz/2}`, `${sx - 0.01} ${slotW} 0.002`, TSLOT);
+      } else if (maxDim === sy && sy > 0.10) {
+        const slotW = 0.008;
+        res += box(`${tx + sx/2} ${ty} ${tz}`, `0.002 ${sy - 0.01} ${slotW}`, TSLOT);
+        res += box(`${tx - sx/2} ${ty} ${tz}`, `0.002 ${sy - 0.01} ${slotW}`, TSLOT);
+        res += box(`${tx} ${ty} ${tz + sz/2}`, `${slotW} ${sy - 0.01} 0.002`, TSLOT);
+        res += box(`${tx} ${ty} ${tz - sz/2}`, `${slotW} ${sy - 0.01} 0.002`, TSLOT);
+      }
+      return res;
+    }
+
+    function cornerGusset(t, s, rot) {
+      const rr = rot ? ` rotation ${rot}` : '';
+      return `Pose { translation ${t}${rr} children [ Shape { castShadows FALSE appearance ${GUSSET} geometry Box { size ${s} } } ] }\n`;
+    }
+
+    let out = '';
+
+    // =========================================================================
+    // 4 UNIFIED CORNER POST POSITIONS (FLUSH FOR BOTH SHELF AND UPPER BOX)
+    // =========================================================================
+    // Exactly identical outer envelope X and Y from bottom to top!
+    const cornerPosts = [
+      [-X / 2 + PS / 2, -Y / 2 + PS / 2],
+      [ X / 2 - PS / 2, -Y / 2 + PS / 2],
+      [-X / 2 + PS / 2,  Y / 2 - PS / 2],
+      [ X / 2 - PS / 2,  Y / 2 - PS / 2]
+    ];
+
+    // =========================================================================
+    // 1. FOUR HEAVY-DUTY CASTER WHEELS (DIRECTLY UNDER THE 4 CORNERS AT z = FZ)
+    // =========================================================================
+    const wZ = FZ + WR;                 // wheel center z (-0.55 m)
+    const plateZ = FZ + WR * 2 + 0.005; // mounting flange z (-0.495 m)
+
+    for (let i = 0; i < cornerPosts.length; i++) {
+      const [wx, wy] = cornerPosts[i];
+      out += box(`${wx} ${wy} ${plateZ}`, '0.09 0.09 0.008', STEEL);
+      out += cyl(`${wx} ${wy} ${plateZ - 0.012}`, 0.026, 0.018, STEEL);
+      out += box(`${wx - 0.024} ${wy} ${wZ + 0.014}`, '0.006 0.045 0.048', STEEL);
+      out += box(`${wx + 0.024} ${wy} ${wZ + 0.014}`, '0.006 0.045 0.048', STEEL);
+      out += cyl(`${wx} ${wy} ${wZ}`, 0.007, 0.060, STEEL, '0 1 0 1.5708');
+      out += cyl(`${wx} ${wy} ${wZ}`, WR, 0.035, RUBBER, '0 1 0 1.5708');
+      out += cyl(`${wx} ${wy} ${wZ}`, WR * 0.62, 0.037, STEEL, '0 1 0 1.5708');
+      if (i < 2) {
+        out += box(`${wx} ${wy - 0.042} ${wZ + 0.018}`, '0.028 0.038 0.008', BRAKE);
+      }
+    }
+
+    // =========================================================================
+    // 2. LOWER LEGS (PROFILES CONNECTING WHEELS TO TABLE, z in [plateZ, 0])
+    // =========================================================================
+    const legH = -plateZ;
+    const legMidZ = plateZ + legH / 2;
+    for (const [px, py] of cornerPosts) {
+      out += aluProfile(`${px} ${py} ${legMidZ}`, `${PS} ${PS} ${legH}`);
+    }
+
+    // Corner gussets connecting lower legs to tabletop frame
+    for (const [px, py] of cornerPosts) {
+      const sx = px > 0 ? -1 : 1;
+      const sy = py > 0 ? -1 : 1;
+      out += cornerGusset(`${px + sx * 0.035} ${py} -0.035`, '0.035 0.035 0.035');
+      out += cornerGusset(`${px} ${py + sy * 0.035} -0.035`, '0.035 0.035 0.035');
+    }
+
+    // =========================================================================
+    // 3. LOWER SHELF (ÉTAGÈRE) UNDER ROBOTS: EXACT SAME X & Y AS UPPER BOX!
+    // =========================================================================
+    const sZ = SZ + PS / 2; // -0.4275 m
+    // Outer perimeter rails flush with outer dimensions X and Y:
+    out += aluProfile(`0 ${Y / 2 - PS / 2} ${sZ}`, `${X - PS * 2} ${PS} ${PS}`);
+    out += aluProfile(`0 ${-Y / 2 + PS / 2} ${sZ}`, `${X - PS * 2} ${PS} ${PS}`);
+    out += aluProfile(`${-X / 2 + PS / 2} 0 ${sZ}`, `${PS} ${Y - PS * 2} ${PS}`);
+    out += aluProfile(`${X / 2 - PS / 2} 0 ${sZ}`, `${PS} ${Y - PS * 2} ${PS}`);
+    // Central transverse reinforcing beam under shelf
+    out += aluProfile(`0 0 ${sZ}`, `${PS} ${Y - PS * 2} ${PS}`);
+
+    // Shelf plate (full width & length matching the box footprint)
+    const shelfTopZ = sZ + PS / 2 + 0.003;
+    out += box(`0 0 ${sZ + PS / 2 + 0.0015}`, `${X - PS * 2 - 0.004} ${Y - PS * 2 - 0.004} 0.003`, SHELF_MAT);
+
+    // Corner gussets connecting shelf rails to vertical posts
+    for (const [px, py] of cornerPosts) {
+      const sx = px > 0 ? -1 : 1;
+      const sy = py > 0 ? -1 : 1;
+      out += cornerGusset(`${px + sx * 0.032} ${py} ${sZ + 0.032}`, '0.03 0.03 0.03');
+      out += cornerGusset(`${px} ${py + sy * 0.032} ${sZ + 0.032}`, '0.03 0.03 0.03');
+    }
+
+    // =========================================================================
+    // 4. POWER SUPPLIES & TEACH PENDANTS ON THE LOWER SHELF
+    // =========================================================================
+    // --- (A) FANUC R-30iB Mate Plus Controller ---
+    const fanucCabX = -0.45;
+    const fanucCabY = 0.08;
+    const fanucCabW = 0.38, fanucCabD = 0.34, fanucCabH = 0.35;
+    const fanucCabZ = shelfTopZ + fanucCabH / 2;
+
+    out += box(`${fanucCabX} ${fanucCabY} ${fanucCabZ}`, `${fanucCabW} ${fanucCabD} ${fanucCabH}`, CAB_DARK);
+    out += box(`${fanucCabX} ${fanucCabY - fanucCabD / 2 - 0.001} ${shelfTopZ + fanucCabH - 0.03}`, `${fanucCabW - 0.02} 0.003 0.045`, FANUC_YEL);
+    out += box(`${fanucCabX} ${fanucCabY - fanucCabD / 2 - 0.003} ${shelfTopZ + fanucCabH - 0.03}`, `0.14 0.001 0.025`, CAB_DARK);
+
+    const swZ = shelfTopZ + fanucCabH * 0.70;
+    out += cyl(`${fanucCabX - 0.12} ${fanucCabY - fanucCabD / 2 - 0.004} ${swZ}`, 0.022, 0.006, FANUC_YEL, '1 0 0 1.5708');
+    out += box(`${fanucCabX - 0.12} ${fanucCabY - fanucCabD / 2 - 0.015} ${swZ}`, '0.012 0.022 0.032', ESTOP_RED);
+
+    for (let g = 0; g < 4; g++) {
+      out += box(`${fanucCabX + 0.05} ${fanucCabY - fanucCabD / 2 - 0.002} ${shelfTopZ + 0.08 + g * 0.035}`, '0.18 0.002 0.012', TSLOT);
+    }
+    out += cyl(`${fanucCabX - 0.06} ${fanucCabY - fanucCabD / 2 - 0.003} ${swZ}`, 0.005, 0.004, LED_GREEN, '1 0 0 1.5708');
+    out += cyl(`${fanucCabX - 0.04} ${fanucCabY - fanucCabD / 2 - 0.003} ${swZ}`, 0.005, 0.004, LED_WHITE, '1 0 0 1.5708');
+    const fanucCabTop = fanucCabZ + fanucCabH / 2;
+    const fanucCableH = Math.max(0.04, -fanucCabTop);
+    out += cyl(`${fanucCabX + 0.10} ${fanucCabY} ${fanucCabTop + fanucCableH / 2}`, 0.016, fanucCableH, CABLE);
+
+    // --- (B) FANUC iPendant (Teach Pendant) ---
+    const fTeachX = -0.45;
+    const fTeachY = -0.32;
+    const fTeachZ = shelfTopZ + 0.04;
+    out += box(`${fTeachX} ${fTeachY} ${shelfTopZ + 0.025}`, '0.19 0.15 0.05', CAB_DARK);
+    const fBodyRot = '1 0 0 -0.42';
+    out += `Pose { translation ${fTeachX} ${fTeachY} ${fTeachZ + 0.03} rotation ${fBodyRot} children [\n`;
+    out += `  Shape { appearance ${FANUC_YEL} geometry Box { size 0.18 0.23 0.035 } }\n`;
+    out += `  Pose { translation 0 0.03 0.019 children [ Shape { appearance ${SCREEN_FANUC} geometry Box { size 0.12 0.095 0.002 } } ] }\n`;
+    out += `  Pose { translation 0 -0.05 0.019 children [ Shape { appearance ${CAB_DARK} geometry Box { size 0.14 0.07 0.002 } } ] }\n`;
+    out += `  Pose { translation 0.065 0.09 0.028 rotation 1 0 0 1.5708 children [ Shape { appearance ${ESTOP_RED} geometry Cylinder { radius 0.014 height 0.020 } } ] }\n`;
+    out += '] }\n';
+    out += cyl(`${fTeachX + 0.07} ${fTeachY + 0.10} ${shelfTopZ + 0.02}`, 0.009, 0.12, CABLE, '1 0 0 1.5708');
+
+    // --- (C) Universal Robots UR5e Control Box ---
+    const urCabX = 0.45;
+    const urCabY = 0.08;
+    const urCabW = 0.42, urCabD = 0.30, urCabH = 0.32;
+    const urCabZ = shelfTopZ + urCabH / 2;
+
+    out += box(`${urCabX} ${urCabY} ${urCabZ}`, `${urCabW} ${urCabD} ${urCabH}`, UR_STEEL);
+    out += box(`${urCabX} ${urCabY - urCabD / 2 - 0.001} ${shelfTopZ + urCabH - 0.03}`, `${urCabW - 0.04} 0.002 0.035`, UR_BLUE);
+    out += cyl(`${urCabX - 0.14} ${urCabY - urCabD / 2 - 0.003} ${shelfTopZ + urCabH - 0.08}`, 0.014, 0.004, LED_WHITE, '1 0 0 1.5708');
+    out += cyl(`${urCabX - 0.14} ${urCabY - urCabD / 2 - 0.004} ${shelfTopZ + urCabH - 0.08}`, 0.010, 0.004, UR_STEEL, '1 0 0 1.5708');
+    out += box(`${urCabX + 0.08} ${urCabY - urCabD / 2 - 0.002} ${shelfTopZ + 0.08}`, '0.16 0.003 0.06', CAB_DARK);
+    out += cyl(`${urCabX + 0.04} ${urCabY - urCabD / 2 - 0.004} ${shelfTopZ + 0.08}`, 0.010, 0.005, STEEL, '1 0 0 1.5708');
+    out += cyl(`${urCabX + 0.11} ${urCabY - urCabD / 2 - 0.004} ${shelfTopZ + 0.08}`, 0.010, 0.005, STEEL, '1 0 0 1.5708');
+    const urCabTop = urCabZ + urCabH / 2;
+    const urCableH = Math.max(0.04, -urCabTop);
+    out += cyl(`${urCabX} ${urCabY} ${urCabTop + urCableH / 2}`, 0.016, urCableH, CABLE);
+
+    // --- (D) Universal Robots Teach Pendant (PolyScope tablet) ---
+    const uTeachX = 0.45;
+    const uTeachY = -0.32;
+    const uTeachZ = shelfTopZ + 0.04;
+    out += box(`${uTeachX} ${uTeachY} ${shelfTopZ + 0.025}`, '0.23 0.15 0.05', CAB_DARK);
+    out += `Pose { translation ${uTeachX} ${uTeachY} ${uTeachZ + 0.03} rotation ${fBodyRot} children [\n`;
+    out += `  Shape { appearance ${CAB_DARK} geometry Box { size 0.25 0.19 0.025 } }\n`;
+    out += `  Pose { translation 0 0 0 children [ Shape { appearance ${UR_STEEL} geometry Box { size 0.254 0.194 0.012 } } ] }\n`;
+    out += `  Pose { translation 0 0 0.014 children [ Shape { appearance ${SCREEN_UI} geometry Box { size 0.21 0.15 0.002 } } ] }\n`;
+    out += `  Pose { translation 0.10 0.075 0.024 rotation 1 0 0 1.5708 children [ Shape { appearance ${ESTOP_RED} geometry Cylinder { radius 0.014 height 0.020 } } ] }\n`;
+    out += '] }\n';
+    out += cyl(`${uTeachX - 0.08} ${uTeachY + 0.10} ${shelfTopZ + 0.02}`, 0.008, 0.12, CABLE, '1 0 0 1.5708');
+
+    // =========================================================================
+    // 5. WORKSTATION TABLETOP AT z = 0 (EXACT SAME X & Y AS SHELF & BOX)
+    // =========================================================================
+    const tFrameZ = -PS / 2;
+    out += aluProfile(`0 ${Y / 2 - PS / 2} ${tFrameZ}`, `${X - PS * 2} ${PS} ${PS}`);
+    out += aluProfile(`0 ${-Y / 2 + PS / 2} ${tFrameZ}`, `${X - PS * 2} ${PS} ${PS}`);
+    out += aluProfile(`${-X / 2 + PS / 2} 0 ${tFrameZ}`, `${PS} ${Y - PS * 2} ${PS}`);
+    out += aluProfile(`${X / 2 - PS / 2} 0 ${tFrameZ}`, `${PS} ${Y - PS * 2} ${PS}`);
+    out += aluProfile(`-0.25 0 ${tFrameZ}`, `${PS} ${Y - PS * 2} ${PS}`);
+    out += aluProfile(` 0.25 0 ${tFrameZ}`, `${PS} ${Y - PS * 2} ${PS}`);
+
+    out += box(`0 0 -0.0075`, `${X - 0.01} ${Y - 0.01} 0.015`, TABLE_MAT);
+
+    // =========================================================================
+    // 6. UPPER PLEXIGLASS BOX (EXACT SAME CORNER POSTS & FOOTPRINT X, Y)
+    // =========================================================================
+    const colH = H;
+    const colMidZ = colH / 2;
+
+    for (const [px, py] of cornerPosts) {
+      out += aluProfile(`${px} ${py} ${colMidZ}`, `${PS} ${PS} ${colH}`);
+      out += box(`${px} ${py} ${H + 0.003}`, `${PS + 0.002} ${PS + 0.002} 0.006`, CAP);
+      const sx = px > 0 ? -1 : 1;
+      const sy = py > 0 ? -1 : 1;
+      out += cornerGusset(`${px + sx * 0.035} ${py} 0.035`, '0.035 0.035 0.035');
+      out += cornerGusset(`${px} ${py + sy * 0.035} 0.035`, '0.035 0.035 0.035');
+    }
+
+    const topZ = H - PS / 2;
+    out += aluProfile(`0 ${Y / 2 - PS / 2} ${topZ}`, `${X - PS * 2} ${PS} ${PS}`);
+    out += aluProfile(`0 ${-Y / 2 + PS / 2} ${topZ}`, `${X - PS * 2} ${PS} ${PS}`);
+    out += aluProfile(`${-X / 2 + PS / 2} 0 ${topZ}`, `${PS} ${Y - PS * 2} ${PS}`);
+    out += aluProfile(`${X / 2 - PS / 2} 0 ${topZ}`, `${PS} ${Y - PS * 2} ${PS}`);
+
+    const pBot = 0.02;
+    const pTop = H - PS;
+    const pHeight = pTop - pBot;
+    const pMidZ = pBot + pHeight / 2;
+    const pThick = 0.006;
+
+    const sideW = Y - PS * 2 - 0.01;
+    out += box(`${-X / 2 + PS / 2} 0 ${pMidZ}`, `${pThick} ${sideW} ${pHeight}`, PLEXI);
+    out += box(`${X / 2 - PS / 2} 0 ${pMidZ}`, `${pThick} ${sideW} ${pHeight}`, PLEXI);
+
+    const royL = oc - ow / 2;
+    const royR = oc + ow / 2;
+    out += aluProfile(`${royL - PS / 2} ${Y / 2 - PS / 2} ${(pBot + oh) / 2}`, `${PS} ${PS} ${oh - pBot}`);
+    out += aluProfile(`${royR + PS / 2} ${Y / 2 - PS / 2} ${(pBot + oh) / 2}`, `${PS} ${PS} ${oh - pBot}`);
+    out += aluProfile(`${oc} ${Y / 2 - PS / 2} ${oh + PS / 2}`, `${ow + PS * 2} ${PS} ${PS}`);
+
+    const rPlexLeftW = (royL - PS) - (-X / 2 + PS);
+    if (rPlexLeftW > 0.02) {
+      out += box(`${-X / 2 + PS + rPlexLeftW / 2} ${Y / 2 - PS / 2} ${pMidZ}`, `${rPlexLeftW} ${pThick} ${pHeight}`, PLEXI);
+    }
+    const rPlexRightW = (X / 2 - PS) - (royR + PS);
+    if (rPlexRightW > 0.02) {
+      out += box(`${royR + PS + rPlexRightW / 2} ${Y / 2 - PS / 2} ${pMidZ}`, `${rPlexRightW} ${pThick} ${pHeight}`, PLEXI);
+    }
+    const rTopH = pTop - (oh + PS);
+    if (rTopH > 0.02) {
+      out += box(`${oc} ${Y / 2 - PS / 2} ${(oh + PS) + rTopH / 2}`, `${ow} ${pThick} ${rTopH}`, PLEXI);
+    }
+
+    if (hasDoor) {
+      const dL = dc - dw / 2;
+      const dR = dc + dw / 2;
+
+      out += aluProfile(`${dL - PS / 2} ${-Y / 2 + PS / 2} ${pMidZ}`, `${PS} ${PS} ${pHeight}`);
+      out += aluProfile(`${dR + PS / 2} ${-Y / 2 + PS / 2} ${pMidZ}`, `${PS} ${PS} ${pHeight}`);
+
+      const fLeftW = (dL - PS) - (-X / 2 + PS);
+      if (fLeftW > 0.02) {
+        out += box(`${-X / 2 + PS + fLeftW / 2} ${-Y / 2 + PS / 2} ${pMidZ}`, `${fLeftW} ${pThick} ${pHeight}`, PLEXI);
+      }
+      const fRightW = (X / 2 - PS) - (dR + PS);
+      if (fRightW > 0.02) {
+        out += box(`${dR + PS + fRightW / 2} ${-Y / 2 + PS / 2} ${pMidZ}`, `${fRightW} ${pThick} ${pHeight}`, PLEXI);
+      }
+
+      const doorH = pHeight - 0.02;
+      const doorW = dw - 0.02;
+      out += box(`${dc} ${-Y / 2 + PS / 2 - 0.008} ${pMidZ}`, `${doorW} ${pThick} ${doorH}`, PLEXI);
+      out += box(`${dc} ${-Y / 2 + PS / 2 - 0.008} ${pBot + 0.015}`, `${doorW} 0.016 0.016`, ALU);
+      out += box(`${dc} ${-Y / 2 + PS / 2 - 0.008} ${pTop - 0.015}`, `${doorW} 0.016 0.016`, ALU);
+
+      out += cyl(`${dL + 0.005} ${-Y / 2 + PS / 2 - 0.012} ${pBot + pHeight * 0.25}`, 0.009, 0.05, STEEL);
+      out += cyl(`${dL + 0.005} ${-Y / 2 + PS / 2 - 0.012} ${pBot + pHeight * 0.75}`, 0.009, 0.05, STEEL);
+
+      out += cyl(`${dR - 0.05} ${-Y / 2 - 0.025} ${pMidZ}`, 0.012, 0.16, HANDLE);
+      out += box(`${dR - 0.05} ${-Y / 2 - 0.012} ${pMidZ - 0.06}`, '0.02 0.025 0.02', CAP);
+      out += box(`${dR - 0.05} ${-Y / 2 - 0.012} ${pMidZ + 0.06}`, '0.02 0.025 0.02', CAP);
+
+      out += box(`${dR - 0.01} ${-Y / 2 + PS / 2 + 0.01} ${pTop - 0.05}`, '0.035 0.04 0.07', CAP);
+      out += box(`${dR - 0.01} ${-Y / 2 + PS / 2 - 0.008} ${pTop - 0.05}`, '0.02 0.015 0.03', ESTOP_RED);
+    }
+
+    const cpX = X / 2 - PS / 2;
+    const cpY = -Y / 2 - 0.04;
+    const cpZ = (pBot + pTop) * 0.50;
+    out += box(`${cpX} ${cpY} ${cpZ}`, '0.09 0.06 0.14', CAP);
+    out += cyl(`${cpX} ${cpY - 0.031} ${cpZ + 0.03}`, 0.020, 0.004, FANUC_YEL, '1 0 0 1.5708');
+    out += cyl(`${cpX} ${cpY - 0.045} ${cpZ + 0.03}`, 0.016, 0.024, ESTOP_RED, '1 0 0 1.5708');
+    out += cyl(`${cpX - 0.022} ${cpY - 0.031} ${cpZ - 0.03}`, 0.009, 0.005, LED_GREEN, '1 0 0 1.5708');
+    out += cyl(`${cpX + 0.022} ${cpY - 0.031} ${cpZ - 0.03}`, 0.009, 0.005, LED_WHITE, '1 0 0 1.5708');
+
+    out += box(`0 0 ${H - 0.003}`, `${X - PS * 2} ${Y - PS * 2} 0.005`, PLEXI);
+  >%
+  Solid {
+    translation IS translation
+    rotation IS rotation
+    children [
+      %<= out >%
+    ]
+    boundingObject Pose {
+      translation 0 0 -0.01
+      children [
+        Box { size %<= X >% %<= Y >% 0.02 }
+      ]
+    }
+  }
+}

@@ -34,7 +34,8 @@ nos propres modèles de SCARA et de bras 6 axes, est étiquetée [`v1.0`](../../
 | 2 × Robotiq 2F-85 | PROTO officiel de Webots, monté dans les toolSlots | pinces adaptatives à deux doigts (course 85 mm) |
 | Convoyeur d'entrée | [`protos/BeltConveyor.proto`](protos/BeltConveyor.proto) | bande de 1,12 m à 0,15 m/s, guides, butée, barrière optique 7 mm au-dessus de la bande |
 | Cubes | monde | 40 mm, 50 g, 3 en circulation (recyclés du bac vers le convoyeur) |
-| Bac de sortie, clôture | [`protos/OutputBin.proto`](protos/OutputBin.proto), [`protos/SafetyFence.proto`](protos/SafetyFence.proto) | |
+| Cellule mobile sur roulettes | [`protos/MobilePlexiCell.proto`](protos/MobilePlexiCell.proto) | poste de travail mobile industriel en profilés d'aluminium rainurés (45×45 mm / 40×40 mm avec rainures en T et équerres d'assemblage), 4 roulettes pivotantes avec freins, étagère inférieure technique accueillant les blocs d'alimentation/contrôleurs (FANUC R-30iB Mate Plus et UR5e Control Box) ainsi que les boîtiers d'apprentissage Teach Pendants (iPendant FANUC et tablette PolyScope UR), plateau supérieur outillé, carter intégral en plexiglas transparent (polycarbonate 6 mm), porte frontale avec sécurité et pupitre arrêt d'urgence |
+| Bac de sortie | [`protos/OutputBin.proto`](protos/OutputBin.proto) | bac récepteur des cubes |
 
 ### Le passage de main
 
