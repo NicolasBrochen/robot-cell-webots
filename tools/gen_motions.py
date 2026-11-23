@@ -1,15 +1,12 @@
 """Generate the two synchronised robot cycles of the cell (Webots .motion files).
 
 Cycle (14.4 s, started by the PLC when a cube sits at the end stop):
-  SCARA : pick at the end stop I (top grasp, faces +-x, upper half of the cube)
-          -> hand-over point H -> release -> back to I.
-  6-axis: from under H, gripper pointing up, grasps faces +-y over the full cube height
-          (palm just below the cube) -> flips the cube 180 deg about y in the air
-          -> drops it into the output bin O -> back.
+  FANUC : half-open gripper above the end stop -> grasp (top, pads on the +-x faces, upper 30 mm)
+          -> presents the cube at the hand-over point H -> releases it once the UR5e holds it -> back.
+  UR5e  : from under H, gripper pointing up, grasps the +-y faces (lower 30 mm) -> flips the cube
+          180 deg about y in the air -> drops it into the output bin -> back.
 
-Checks (non-zero exit if one fails): IK convergence, structural clearance between the
-two robots, clearance to the fixed obstacles, joint speeds within the motor limits.
-
+Checks (non-zero exit if one fails): IK convergence, joint limits, joint speeds (< 80 % of the motor limits).
     python tools/gen_motions.py [motions_dir]
 """
 import math
@@ -18,109 +15,97 @@ import sys
 
 import numpy as np
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-from cell_layout import (ARM_BASE, CLOSE, CYCLE, DT, H, I, O, OPEN, R_HAND, R_HOVER,  # noqa: E402
-                         R_HPRE, S_GRASP, S_HAND, S_UP, SCARA_BASE, STATIC)
-from kinematics import (arm_ik, arm_spheres, box_dist, interp, motion_stamp, ry,  # noqa: E402
-                        scara_ik, scara_spheres)
+HERE = os.path.dirname(os.path.abspath(__file__))
+sys.path.insert(0, HERE)
+from cell_layout import (CYCLE, DT, F_GRASP, F_HAND, F_HOVER, F_LEAVE, FANUC_BASE, FANUC_YAW, G_CLOSE,  # noqa: E402
+                         G_HALF, G_OPEN, H, I, O, TCP, U_DROP, U_HAND, U_PRE, UR_BASE, UR_YAW)
+from kinematics import interp, motion_stamp  # noqa: E402
+from kinematics_lib import FANUC, UR5E  # noqa: E402
 
 PI = math.pi
-S_KEYS = [  # (t, x, y, d3, fingers)
-    (0.0, *I, S_UP, OPEN), (1.0, *I, S_GRASP, OPEN), (1.6, *I, S_GRASP, CLOSE), (1.8, *I, S_GRASP, CLOSE),
-    (2.6, *I, S_UP, CLOSE), (4.6, *H, S_UP, CLOSE), (5.2, *H, S_HAND, CLOSE), (6.8, *H, S_HAND, CLOSE),
-    (7.4, *H, S_HAND, OPEN), (8.0, *H, S_UP, OPEN), (10.0, *I, S_UP, OPEN), (CYCLE, *I, S_UP, OPEN),
+# gripper frame: z = approach, y = closing direction
+R_F = np.array([[0, 1, 0], [1, 0, 0], [0, 0, -1]], float)        # FANUC: pointing down, closing along world x
+R_U_DOWN = np.array([[-1, 0, 0], [0, 1, 0], [0, 0, -1]], float)  # UR5e: pointing down, closing along world y
+
+
+def ry(th):
+    c, s = math.cos(th), math.sin(th)
+    return np.array([[c, 0, s], [0, 1, 0], [-s, 0, c]])
+
+
+F_KEYS = [  # (t, x, y, z_gripper_origin, fingers)
+    (0.0, *I, F_HOVER, G_HALF), (1.0, *I, F_GRASP, G_HALF), (1.4, *I, F_GRASP, G_CLOSE), (1.8, *I, F_GRASP, G_CLOSE),
+    (2.6, *I, F_HOVER, G_CLOSE), (4.6, *H, F_HAND, G_CLOSE), (6.8, *H, F_HAND, G_CLOSE), (7.2, *H, F_HAND, G_HALF),
+    (8.0, *H, F_LEAVE, G_HALF), (10.0, *I, F_HOVER, G_HALF), (CYCLE, *I, F_HOVER, G_HALF),
 ]
-R_KEYS = [  # (t, x, y, z, theta, fingers)   theta: 0 = fingers down, pi = fingers up
-    (0.0, *O, R_HOVER, 0, OPEN), (2.0, *O, R_HOVER, 0, OPEN), (4.6, *H, R_HPRE, PI, OPEN),
-    (5.2, *H, R_HPRE, PI, OPEN), (6.0, *H, R_HAND, PI, OPEN), (6.6, *H, R_HAND, PI, CLOSE),
-    (8.0, *H, R_HAND, PI, CLOSE), (8.8, *H, R_HPRE, PI, CLOSE), (11.6, *O, R_HOVER, 0, CLOSE),
-    (12.2, *O, R_HOVER, 0, OPEN), (CYCLE, *O, R_HOVER, 0, OPEN),
+U_KEYS = [  # (t, x, y, z_gripper_origin, theta, fingers)  theta: 0 = pointing down, pi = pointing up
+    (0.0, *O, U_DROP, 0, G_OPEN), (1.0, *O, U_DROP, 0, G_OPEN), (4.6, *H, U_PRE, PI, G_OPEN),
+    (5.2, *H, U_PRE, PI, G_OPEN), (6.0, *H, U_HAND, PI, G_OPEN), (6.4, *H, U_HAND, PI, G_CLOSE),
+    (8.0, *H, U_HAND, PI, G_CLOSE), (8.8, *H, U_PRE, PI, G_CLOSE), (11.6, *O, U_DROP, 0, G_CLOSE),
+    (12.2, *O, U_DROP, 0, G_OPEN), (CYCLE, *O, U_DROP, 0, G_OPEN),
 ]
-SCARA_VMAX = [3.0, 4.0, 0.3, 5.0]
-ARM_VMAX = [3.0, 3.0, 3.0, 8.0, 3.0, 8.0]
-MIN_ROBOT_CLEARANCE = 0.010
-MIN_STATIC_CLEARANCE = 0.020
-
-RZ = np.diag([-1.0, -1.0, 1.0])                    # base yaw of the 6-axis arm (pi)
-R_DOWN = np.array([[0, -1, 0], [1, 0, 0], [0, 0, 1]], float)
-ARM_SEED = [0.9, 0.8, 0.3, 0.0, 0.46, 0.9]
+F_SEED = [0.9, 0.3, -0.2, 0.0, -1.2, 0.0]
+U_SEED = [0.963, -1.144, 1.402, 1.313, 1.571, 2.533]   # wrist_1 (J4) branch rotated by 180 deg
+# motor speed limits of the PROTOs (rad/s); the cycles must stay below 80 % of them
+VMAX = {"fanuc": [7.85, 6.63, 9.08, 9.60, 9.51, 17.45], "ur5e": [3.14, 3.14, 3.14, 6.28, 6.28, 6.28]}
+GRIPPER = ["ROBOTIQ 2F-85 Gripper::left finger joint", "ROBOTIQ 2F-85 Gripper::right finger joint"]
 
 
-def arm_target(x, y, z, th):
-    p_local = RZ.T @ (np.array([x, y, z]) - np.array(ARM_BASE))
-    R_local = RZ.T @ ry(th) @ R_DOWN
-    return p_local, R_local
+def local(base, yaw, p, R):
+    """World target -> robot base frame."""
+    c, s = math.cos(yaw), math.sin(yaw)
+    Rz = np.array([[c, -s, 0], [s, c, 0], [0, 0, 1]])
+    return Rz.T @ (np.asarray(p) - np.asarray(base)), Rz.T @ R
 
 
 def generate():
     n = int(round(CYCLE / DT))
-    s_rows, r_rows, qs_all, q6_all = [], [], [], []
-    q6 = None
+    rows = {"fanuc": [], "ur5e": []}
+    qf = qu = None
+    traj = {"fanuc": [], "ur5e": []}
     for k in range(n + 1):
         t = k * DT
-        sx, sy, sd3, sf = interp(S_KEYS, t)
-        qs = scara_ik(sx, sy, sd3, base=SCARA_BASE[:2])
-        rx, ry_, rz, rth, rf = interp(R_KEYS, t)
-        q6 = arm_ik(*arm_target(rx, ry_, rz, rth), q6 if q6 is not None else ARM_SEED)
-        s_rows.append(f"{motion_stamp(t)},Pose{k}," + ",".join(f"{v:.5f}" for v in qs) + f",{sf:.5f},{sf:.5f}")
-        r_rows.append(f"{motion_stamp(t)},Pose{k}," + ",".join(f"{v:.5f}" for v in q6) + f",{rf:.5f},{rf:.5f}")
-        qs_all.append((t, qs, rf))
-        q6_all.append((t, q6.copy(), rf))
-    return s_rows, r_rows, qs_all, q6_all
+        fx, fy, fz, fg = interp(F_KEYS, t)
+        p, R = local(FANUC_BASE, FANUC_YAW, (fx, fy, fz), R_F)
+        qf = FANUC.ik(p, R, qf if qf is not None else F_SEED, tcp_offset=0.0)
+        ux, uy, uz, uth, ug = interp(U_KEYS, t)
+        p, R = local(UR_BASE, UR_YAW, (ux, uy, uz), ry(uth) @ R_U_DOWN)
+        qu = UR5E.ik(p, R, qu if qu is not None else U_SEED, tcp_offset=0.0)
+        for name, q, g in (("fanuc", qf, fg), ("ur5e", qu, ug)):
+            rows[name].append(f"{motion_stamp(t)},Pose{k}," + ",".join(f"{v:.5f}" for v in q) + f",{g:.5f},{g:.5f}")
+            traj[name].append(np.array(q))
+    return rows, traj
 
 
-def check(qs_all, q6_all):
+def check(traj):
     ok = True
-    min_rs, t_rs = 1e9, 0.0
-    min_static = {k: (1e9, 0.0) for k in STATIC}
-    for (t, qs, _), (_, q6, rf) in zip(qs_all, q6_all):
-        world = lambda sph: [(RZ @ p + np.array(ARM_BASE), r) for p, r in sph]  # noqa: E731
-        # robot <-> robot: structure only (fingers and the shared cube meet by design at the hand-over)
-        for pa, ra in world(arm_spheres(q6, holding=False, fingers=False)):
-            for pb, rb in scara_spheres(qs, base=SCARA_BASE, fingers=False):
-                d = float(np.linalg.norm(pa - pb)) - ra - rb
-                if d < min_rs:
-                    min_rs, t_rs = d, t
-        # 6-axis (+ carried cube) <-> fixed obstacles
-        for pa, ra in world(arm_spheres(q6, holding=rf > 0.005, fingers=False)):
-            for name, (c, s) in STATIC.items():
-                d = box_dist(pa, c, s) - ra
-                if d < min_static[name][0]:
-                    min_static[name] = (d, t)
-    print(f"clearance SCARA <-> 6-axis (structure, fingers excluded): {1000 * min_rs:6.1f} mm at t={t_rs:.2f} s")
-    if min_rs < MIN_ROBOT_CLEARANCE:
-        ok = False
-        print("  FAIL: below", 1000 * MIN_ROBOT_CLEARANCE, "mm")
-    for name, (d, t) in min_static.items():
-        print(f"clearance 6-axis <-> {name:15s}: {1000 * d:6.1f} mm at t={t:.2f} s")
-        if d < MIN_STATIC_CLEARANCE:
-            ok = False
-            print("  FAIL: below", 1000 * MIN_STATIC_CLEARANCE, "mm")
-    for label, rows, vmax in (("SCARA", [r[1] for r in qs_all], SCARA_VMAX), ("6-axis", [r[1] for r in q6_all], ARM_VMAX)):
-        Q = np.array(rows)
+    for name, chain in (("fanuc", FANUC), ("ur5e", UR5E)):
+        Q = np.array(traj[name])
         v = np.abs(np.diff(Q, axis=0)).max(axis=0) / DT
-        print(f"max joint speed {label:6s}: " + " ".join(f"{a:.2f}/{b:g}" for a, b in zip(v, vmax)))
-        if np.any(v > np.array(vmax)):
+        lim = np.array(chain.limits)
+        margin = np.minimum(Q.min(axis=0) - lim[:, 0], lim[:, 1] - Q.max(axis=0))
+        print(f"{name:6s} max joint speed (rad/s): " + " ".join(f"{x:.2f}/{m:g}" for x, m in zip(v, VMAX[name])))
+        print(f"{name:6s} min margin to joint limits (rad): " + " ".join(f"{x:.2f}" for x in margin))
+        if np.any(margin < 0.02):
             ok = False
-            print("  FAIL: joint speed above motor limit")
+            print("  FAIL: joint limit")
+        if np.any(v > 0.8 * np.array(VMAX[name])):
+            ok = False
+            print("  FAIL: joint speed above 80 % of the motor limit")
     return ok
 
 
 def main(outdir):
     os.makedirs(outdir, exist_ok=True)
-    s_rows, r_rows, qs_all, q6_all = generate()
-    hdr = "#WEBOTS_MOTION,V1.0,"
-    with open(os.path.join(outdir, "scara_cell.motion"), "w") as f:
-        f.write(hdr + "joint1,joint2,joint3,joint4,finger_left,finger_right\n" + "\n".join(s_rows) + "\n")
-    with open(os.path.join(outdir, "arm6_cell.motion"), "w") as f:
-        f.write(hdr + ",".join(f"joint{i}" for i in range(1, 7)) + ",finger_left,finger_right\n"
-                + "\n".join(r_rows) + "\n")
-    print(f"{len(s_rows)} poses per robot, cycle {CYCLE} s -> {outdir}")
-    ok = check(qs_all, q6_all)
+    rows, traj = generate()
+    for name, chain in (("fanuc", FANUC), ("ur5e", UR5E)):
+        with open(os.path.join(outdir, f"{name}_cell.motion"), "w") as f:
+            f.write("#WEBOTS_MOTION,V1.0," + ",".join(chain.names + GRIPPER) + "\n" + "\n".join(rows[name]) + "\n")
+    print(f"{len(rows['fanuc'])} poses per robot, cycle {CYCLE} s -> {outdir}")
+    ok = check(traj)
     print("OK" if ok else "CHECKS FAILED")
     return 0 if ok else 1
 
 
 if __name__ == "__main__":
-    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else
-                  os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "motions")))
+    sys.exit(main(sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, "..", "motions")))

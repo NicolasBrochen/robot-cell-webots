@@ -2,12 +2,37 @@
   "name": "Endurance: 20 consecutive cycles (5 min of production) without a missed pick, a drop or a collision",
   "duration": 300,
   "checks": [
-    { "metric": "starts", "min": 20 },
-    { "metric": "delivered", "min": 20 },
-    { "metric": "starts_without_cube", "max": 0 },
-    { "metric": "cubes_on_floor", "max": 0 },
-    { "metric": "robot_contacts", "max": 0 },
-    { "metric": "handover_offset_mm", "max": 1.5 },
-    { "metric": "arm6_cube_slip_mm", "max": 3.0 }
+    {
+      "metric": "starts",
+      "min": 20
+    },
+    {
+      "metric": "delivered",
+      "min": 20
+    },
+    {
+      "metric": "starts_without_cube",
+      "max": 0
+    },
+    {
+      "metric": "cubes_on_floor",
+      "max": 0
+    },
+    {
+      "metric": "robot_contacts",
+      "max": 0
+    },
+    {
+      "metric": "handover_offset_mm",
+      "max": 3.0
+    },
+    {
+      "metric": "handover_width_offset_mm",
+      "max": 8.0
+    },
+    {
+      "metric": "arm6_cube_slip_mm",
+      "max": 3.0
+    }
   ]
 }

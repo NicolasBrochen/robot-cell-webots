@@ -1,0 +1,279 @@
+#VRML_SIM R2025a utf8
+# license: BSD-3-Clause (ROS-Industrial fanuc packages, (c) TU Delft Robotics Institute and contributors)
+# This is a proto file for Webots for the FanucLrMate200iD
+# Extracted from: urdf/fanuc_lrmate200id.urdf
+
+PROTO FanucLrMate200iD [
+  field  SFVec3f     translation     0 0 0
+  field  SFRotation  rotation        0 0 1 0
+  field  SFString    name            "FanucLrMate200iD"  # Is `Robot.name`.
+  field  SFString    controller      "void"              # Is `Robot.controller`.
+  field  MFString    controllerArgs  []                  # Is `Robot.controllerArgs`.
+  field  SFString    customData      ""                  # Is `Robot.customData`.
+  field  SFBool      supervisor      FALSE               # Is `Robot.supervisor`.
+  field  SFBool      synchronization TRUE                # Is `Robot.synchronization`.
+  field  SFBool      selfCollision   FALSE               # Is `Robot.selfCollision`.
+  field  MFNode      toolSlot        []                  # Extend the robot with new nodes at the end of the arm.
+]
+{
+  Robot {
+    translation IS translation
+    rotation IS rotation
+    controller IS controller
+    controllerArgs IS controllerArgs
+    customData IS customData
+    supervisor IS supervisor
+    synchronization IS synchronization
+    selfCollision IS selfCollision
+    children [
+      Shape {
+        appearance DEF base_link_material PBRAppearance {
+          baseColor 0.278431 0.278431 0.278431
+          roughness 1.000000
+          metalness 0
+        }
+        geometry DEF base_link Mesh {
+          url "meshes/fanuc_lrmate200id/visual/base_link.stl"
+        }
+      }
+      HingeJoint {
+        jointParameters HingeJointParameters {
+          axis 0.000000 0.000000 1.000000
+          anchor 0.000000 0.000000 0.330000
+        }
+        device [
+          RotationalMotor {
+            name "joint_1"
+            maxVelocity 7.853981633974483
+            minPosition -2.9670597283903604
+            maxPosition 2.9670597283903604
+            maxTorque 10000
+          }
+          PositionSensor {
+            name "joint_1_sensor"
+          }
+        ]
+        endPoint Solid {
+          translation 0.000000 0.000000 0.330000
+          children [
+            Shape {
+              appearance DEF link_1_material PBRAppearance {
+                baseColor 0.960000 0.760000 0.130000
+                roughness 1.000000
+                metalness 0
+              }
+              geometry DEF link_1 Mesh {
+                url "meshes/fanuc_lrmate200id/visual/link_1.stl"
+              }
+            }
+            HingeJoint {
+              jointParameters HingeJointParameters {
+                axis 0.000000 1.000000 0.000000
+                anchor 0.050000 0.000000 0.000000
+              }
+              device [
+                RotationalMotor {
+                  name "joint_2"
+                  maxVelocity 6.632251157578453
+                  minPosition -1.7453292519943295
+                  maxPosition 2.530727415391778
+                  maxTorque 10000
+                }
+                PositionSensor {
+                  name "joint_2_sensor"
+                }
+              ]
+              endPoint Solid {
+                translation 0.050000 0.000000 0.000000
+                children [
+                  Shape {
+                    appearance DEF link_2_material PBRAppearance {
+                      baseColor 0.960000 0.760000 0.130000
+                      roughness 1.000000
+                      metalness 0
+                    }
+                    geometry DEF link_2 Mesh {
+                      url "meshes/fanuc_lrmate200id/visual/link_2.stl"
+                    }
+                  }
+                  HingeJoint {
+                    jointParameters HingeJointParameters {
+                      axis 0.000000 -1.000000 0.000000
+                      anchor 0.000000 0.000000 0.330000
+                    }
+                    device [
+                      RotationalMotor {
+                        name "joint_3"
+                        maxVelocity 9.075712110370514
+                        minPosition -1.2217304763960306
+                        maxPosition 3.5779249665883754
+                        maxTorque 10000
+                      }
+                      PositionSensor {
+                        name "joint_3_sensor"
+                      }
+                    ]
+                    endPoint Solid {
+                      translation 0.000000 0.000000 0.330000
+                      children [
+                        Shape {
+                          appearance DEF link_3_material PBRAppearance {
+                            baseColor 0.960000 0.760000 0.130000
+                            roughness 1.000000
+                            metalness 0
+                          }
+                          geometry DEF link_3 Mesh {
+                            url "meshes/fanuc_lrmate200id/visual/link_3.stl"
+                          }
+                        }
+                        HingeJoint {
+                          jointParameters HingeJointParameters {
+                            axis -1.000000 0.000000 0.000000
+                            anchor 0.000000 0.000000 0.035000
+                          }
+                          device [
+                            RotationalMotor {
+                              name "joint_4"
+                              maxVelocity 9.599310885968812
+                              minPosition -3.3161255787892263
+                              maxPosition 3.3161255787892263
+                              maxTorque 10000
+                            }
+                            PositionSensor {
+                              name "joint_4_sensor"
+                            }
+                          ]
+                          endPoint Solid {
+                            translation 0.000000 0.000000 0.035000
+                            children [
+                              Shape {
+                                appearance DEF link_4_material PBRAppearance {
+                                  baseColor 0.960000 0.760000 0.130000
+                                  roughness 1.000000
+                                  metalness 0
+                                }
+                                geometry DEF link_4 Mesh {
+                                  url "meshes/fanuc_lrmate200id/visual/link_4.stl"
+                                }
+                              }
+                              HingeJoint {
+                                jointParameters HingeJointParameters {
+                                  axis 0.000000 -1.000000 0.000000
+                                  anchor 0.335000 0.000000 0.000000
+                                }
+                                device [
+                                  RotationalMotor {
+                                    name "joint_5"
+                                    maxVelocity 9.512044423369096
+                                    minPosition -2.181661564992912
+                                    maxPosition 2.181661564992912
+                                    maxTorque 10000
+                                  }
+                                  PositionSensor {
+                                    name "joint_5_sensor"
+                                  }
+                                ]
+                                endPoint Solid {
+                                  translation 0.335000 0.000000 0.000000
+                                  children [
+                                    Shape {
+                                      appearance DEF link_5_material PBRAppearance {
+                                        baseColor 0.960000 0.760000 0.130000
+                                        roughness 1.000000
+                                        metalness 0
+                                      }
+                                      geometry DEF link_5 Mesh {
+                                        url "meshes/fanuc_lrmate200id/visual/link_5.stl"
+                                      }
+                                    }
+                                    HingeJoint {
+                                      jointParameters HingeJointParameters {
+                                        axis -1.000000 0.000000 0.000000
+                                        anchor 0.080000 0.000000 0.000000
+                                      }
+                                      device [
+                                        RotationalMotor {
+                                          name "joint_6"
+                                          maxVelocity 17.453292519943297
+                                          minPosition -6.283185307179586
+                                          maxPosition 6.283185307179586
+                                          maxTorque 10000
+                                        }
+                                        PositionSensor {
+                                          name "joint_6_sensor"
+                                        }
+                                      ]
+                                      endPoint Solid {
+                                        translation 0.080000 0.000000 0.000000
+                                        children [
+                                          Shape {
+                                            appearance DEF link_6_material PBRAppearance {
+                                              baseColor 0.150000 0.150000 0.150000
+                                              roughness 1.000000
+                                              metalness 0
+                                            }
+                                            geometry DEF link_6 Mesh {
+                                              url "meshes/fanuc_lrmate200id/visual/link_6.stl"
+                                            }
+                                          }
+                                          Solid {
+                                            rotation 0.707107 0.000000 0.707107 3.141593
+                                            children [
+                                              Group {
+                                                children IS toolSlot
+                                              }
+                                            ]
+                                            physics Physics {
+                                            }
+                                            boundingObject Box {
+                                              size 0.01 0.01 0.01
+                                            }
+                                            name "tool0"
+                                          }
+                                        ]
+                                        name "link_6"
+                                        boundingObject USE link_6
+                                        physics Physics {
+                                        }
+                                      }
+                                    }
+                                  ]
+                                  name "link_5"
+                                  boundingObject USE link_5
+                                  physics Physics {
+                                  }
+                                }
+                              }
+                            ]
+                            name "link_4"
+                            boundingObject USE link_4
+                            physics Physics {
+                            }
+                          }
+                        }
+                      ]
+                      name "link_3"
+                      boundingObject USE link_3
+                      physics Physics {
+                      }
+                    }
+                  }
+                ]
+                name "link_2"
+                boundingObject USE link_2
+                physics Physics {
+                }
+              }
+            }
+          ]
+          name "link_1"
+          boundingObject USE link_1
+          physics Physics {
+          }
+        }
+      }
+    ]
+    name IS name
+    boundingObject USE base_link
+  }
+}

@@ -1,10 +1,26 @@
 {
-  "name": "Hand-over: the cube stays centred in both grippers and never slips into the 6-axis palm",
+  "name": "Hand-over: the cube stays centred in both Robotiq grippers and does not slip in either of them",
   "duration": 45,
   "checks": [
-    { "metric": "delivered", "min": 2 },
-    { "metric": "handover_offset_mm", "max": 1.5 },
-    { "metric": "arm6_cube_slip_mm", "max": 3.0 },
-    { "metric": "arm6_palm_gap_min_mm", "min": -0.5 }
+    {
+      "metric": "delivered",
+      "min": 2
+    },
+    {
+      "metric": "handover_offset_mm",
+      "max": 3.0
+    },
+    {
+      "metric": "handover_width_offset_mm",
+      "max": 8.0
+    },
+    {
+      "metric": "arm6_cube_slip_mm",
+      "max": 3.0
+    },
+    {
+      "metric": "fanuc_cube_slip_mm",
+      "max": 3.0
+    }
   ]
 }

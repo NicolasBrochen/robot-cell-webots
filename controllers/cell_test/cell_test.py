@@ -16,10 +16,12 @@ Metrics
   starts_after_starve    START orders after the last "starve" action + 1 cycle
   cubes_on_floor         cube samples lying on the floor outside the bin (should be 0)
   robot_contacts         contacts between a robot and anything but a cube
-  handover_offset_mm     max horizontal offset of the cube from either finger centre while both grippers hold it
-  arm6_cube_slip_mm      max |cube - finger centre| along the 6-axis gripper axis while the 6-axis holds it alone
-                         and the gripper does not point down (cube weight towards or across the palm)
-  arm6_palm_gap_min_mm   min gap between the cube face and the 6-axis palm (negative = cube inside the palm)
+  handover_offset_mm     max offset of the cube along the closing axis of a gripper while that gripper holds it
+                         alone (so it is closed on the cube): the cube must be centred between the two fingers
+  handover_width_offset_mm  same along the pad width (22 mm pads on a 40 mm cube: < 9 mm keeps the pad on the face)
+  arm6_cube_slip_mm      max |cube - nominal TCP| along the UR5e gripper axis while the UR5e holds it alone
+                         and its gripper does not point down (weight towards or across the palm)
+  fanuc_cube_slip_mm     same for the FANUC gripper while the FANUC holds the cube alone
 """
 import json
 import math
@@ -38,19 +40,22 @@ rx.enable(dt)
 cubes = []
 while sup.getFromDef(f"CUBE_{len(cubes)}") is not None:
     cubes.append(sup.getFromDef(f"CUBE_{len(cubes)}"))
-robots = {name: sup.getFromDef(d) for name, d in (("scara", "SCARA"), ("arm6", "ARM6"))}
-tools = {name: r.getFromProtoDef("TOOL") for name, r in robots.items()}
-fingers = {name: (r.getFromProtoDef("FINGER_L"), r.getFromProtoDef("FINGER_R")) for name, r in robots.items()}
+robots = {name: sup.getFromDef(d) for name, d in (("fanuc", "FANUC"), ("ur5e", "UR5E"))}
+tools = {"fanuc": sup.getFromDef("FANUC_GRIP"), "ur5e": sup.getFromDef("UR_GRIP")}   # Robotiq nodes (toolSlots)
+TCP = 0.15                         # nominal cube centre along the gripper z axis
 for r in robots.values():
     r.enableContactPointsTracking(dt, True)
 stop = sup.getFromDef("CONVEYOR").getPosition()
 bin_pos = sup.getFromDef("OUTPUT_BIN").getPosition()
 
 m = {"delivered": 0, "starts": 0, "starts_without_cube": 0, "starts_after_starve": 0, "cubes_on_floor": 0,
-     "robot_contacts": 0, "handover_offset_mm": 0.0, "arm6_cube_slip_mm": 0.0, "arm6_palm_gap_min_mm": 99.0}
+     "robot_contacts": 0, "handover_offset_mm": 0.0, "handover_width_offset_mm": 0.0, "arm6_cube_slip_mm": 0.0, "fanuc_cube_slip_mm": 0.0}
 in_bin, starve_t, actions = set(), None, sorted(spec.get("actions", []), key=lambda a: a["at"])
 events = []
 worst_slip = {}
+worst_handover = {}
+last_double = {}
+dropped = set()
 
 
 def local(tool, p):
@@ -60,16 +65,16 @@ def local(tool, p):
     return [sum(R[3 * j + i] * d[j] for j in range(3)) for i in range(3)]
 
 
-def gap(name):
-    t = tools[name]
-    return local(t, fingers[name][1].getPosition())[0] - local(t, fingers[name][0].getPosition())[0]
+def in_grip(name, p):
+    """Cube centre inside the gripper capture zone (between the pads) and in the air."""
+    q = local(tools[name], p)
+    return abs(q[0]) < 0.015 and abs(q[1]) < 0.015 and abs(q[2] - TCP) < 0.015 and p[2] > 0.40, q
 
 
 def cube_at_stop():
     return any(math.dist(c.getPosition(), (stop[0], stop[1], 0.37)) < 0.010 for c in cubes)   # open-gripper capture range
 
 
-GRIP_CLOSED = 0.0503     # finger gap when closed on the 40 mm cube = 50.0 mm (+0.3 mm margin)
 k = 0
 while sup.step(dt) != -1:
     t = sup.getTime()
@@ -109,30 +114,39 @@ while sup.step(dt) != -1:
             in_bin.discard(i)
         if not inb and p[2] < 0.03 and -1.5 < p[0] < 5:     # off-cell parking (x = -2) and reserve (x = 10) excluded
             m["cubes_on_floor"] += 1
+            if i not in dropped:
+                dropped.add(i)
+                events.append((round(t, 2), f"cube {i} on the floor", [round(v, 3) for v in p]))
     for name, r in robots.items():
         for cp in r.getContactPoints(True):
             if min(math.dist(cp.getPoint(), p) for p in cps) > 0.035:
                 m["robot_contacts"] += 1
-    gs, ga = gap("scara"), gap("arm6")
+                if m["robot_contacts"] <= 5 or m["robot_contacts"] % 50 == 0:
+                    events.append((round(t, 2), f"{name} contact", [round(v, 3) for v in cp.getPoint()]))
     tr = spec.get("trace")
     if tr and tr[0] <= t <= tr[1] and k % 12 == 0:      # optional debug trace (every ~0.1 s)
-        events.append((round(t, 2), "trace", {"scara_gap_mm": round(1000 * gs, 1),
-                       "scara_fingers": [round(v, 3) for v in local(tools["scara"], tools["scara"].getPosition())],
-                       "cubes": [[round(v, 4) for v in p] for p in cps],
-                       "cube_in_scara": [[round(1000 * v, 1) for v in local(tools["scara"], p)] for p in cps]}))
+        R = tools["ur5e"].getOrientation()
+        events.append((round(t, 2), "trace", {"cube0_in_ur_mm": [round(1000 * v, 1) for v in local(tools["ur5e"], cps[0])],
+                       "cube0_in_fanuc_mm": [round(1000 * v, 1) for v in local(tools["fanuc"], cps[0])],
+                       "cube0_world": [round(v, 3) for v in cps[0]], "ur_grip_z_axis": [round(R[2], 2), round(R[5], 2), round(R[8], 2)]}))
     for p in cps:
-        ls, la = local(tools["scara"], p), local(tools["arm6"], p)
-        held_s = gs < GRIP_CLOSED and abs(ls[0]) < 0.03 and abs(ls[1]) < 0.03 and -0.07 < ls[2] < 0.0
-        held_a = ga < GRIP_CLOSED and abs(la[0]) < 0.03 and abs(la[1]) < 0.03 and -0.07 < la[2] < 0.0
-        if held_s and held_a:
-            m["handover_offset_mm"] = max(m["handover_offset_mm"], 1000 * math.hypot(ls[0], ls[1]),
-                                          1000 * math.hypot(la[0], la[1]))
-        if held_a and not held_s and tools["arm6"].getOrientation()[8] < 0.5:   # gripper not pointing down
-            slip = 1000 * abs(la[2] + 0.035)
+        held_f, lf = in_grip("fanuc", p)
+        held_u, lu = in_grip("ur5e", p)
+        if held_u and not held_f:                   # UR5e alone: its gripper is closed on the cube
+            m["handover_offset_mm"] = max(m["handover_offset_mm"], 1000 * abs(lu[1]))
+            m["handover_width_offset_mm"] = max(m["handover_width_offset_mm"], 1000 * abs(lu[0]))
+        if held_f and not held_u:                   # FANUC alone: idem
+            if 1000 * abs(lf[1]) > m["handover_offset_mm"]:
+                worst_handover.update(t=round(t, 3), in_fanuc_mm=[round(1000 * v, 1) for v in lf])
+            m["handover_offset_mm"] = max(m["handover_offset_mm"], 1000 * abs(lf[1]))
+            m["handover_width_offset_mm"] = max(m["handover_width_offset_mm"], 1000 * abs(lf[0]))
+        if held_u and not held_f and tools["ur5e"].getOrientation()[8] > -0.5:   # UR gripper not pointing down
+            slip = 1000 * abs(lu[2] - TCP)
             if slip > m["arm6_cube_slip_mm"]:
-                worst_slip.update(t=round(t, 3), local_mm=[round(1000 * v, 1) for v in la], gap_mm=round(1000 * ga, 1))
+                worst_slip.update(t=round(t, 3), local_mm=[round(1000 * v, 1) for v in lu])
             m["arm6_cube_slip_mm"] = max(m["arm6_cube_slip_mm"], slip)
-            m["arm6_palm_gap_min_mm"] = min(m["arm6_palm_gap_min_mm"], 1000 * (-0.015 - (la[2] + 0.02)))
+        if held_f and not held_u:
+            m["fanuc_cube_slip_mm"] = max(m["fanuc_cube_slip_mm"], 1000 * abs(lf[2] - TCP))
     if t >= spec["duration"]:
         break
 
@@ -145,7 +159,7 @@ for c in spec["checks"]:
     bound = (f">= {c['min']}" if "min" in c else "") + (" and " if "min" in c and "max" in c else "") + \
             (f"<= {c['max']}" if "max" in c else "")
     print(f"  [{'PASS' if passed else 'FAIL'}] {c['metric']:22s} = {v:8.3f}   (expected {bound})", flush=True)
-json.dump({"name": spec["name"], "passed": ok, "metrics": m, "checks": results, "events": events, "worst_slip": worst_slip,
+json.dump({"name": spec["name"], "passed": ok, "metrics": m, "checks": results, "events": events, "worst_slip": worst_slip, "worst_handover": worst_handover,
            "final_cubes": [[round(v, 3) for v in c.getPosition()] for c in cubes]},
           open(report_path, "w"), indent=2)
 print(f"[cell_test] {spec['name']}: {'PASSED' if ok else 'FAILED'}", flush=True)

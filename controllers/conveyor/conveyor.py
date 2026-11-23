@@ -25,7 +25,7 @@ SLAT_PITCH = 0.05
 SLAT_Y_MIN, SLAT_Y_MAX = -0.015, 1.095   # slat travel in the PROTO frame
 PRESENCE_MAX = 0.08          # m: below this the beam sees a cube
 PRESENCE_DELAY = 0.3         # s of stable presence before a cycle starts
-ROBOTS = {"scara", "arm6"}
+ROBOTS = {"fanuc", "ur5e"}
 RESERVE_X = 10.0
 
 sup = Supervisor()
@@ -100,6 +100,11 @@ while sup.step(dt) != -1:
             c.setVelocity([-(p[0] - X0) * 2.0, -SPEED, v[2], 0, 0, 0])
         elif at_stop(p):
             busy = True
+            # keep it pressed against the stop: the frictionless belt lets it drift a few mm away,
+            # which would offset it in the gripper; only while it lies flat (never during a grasp)
+            if p[1] > Y_STOP + 0.001 and abs(p[2] - (BELT_TOP + 0.02)) < 0.001:
+                v = c.getVelocity()
+                c.setVelocity([0, -0.02, v[2], 0, 0, 0])
         elif in_bin(p):
             if math.sqrt(sum(x * x for x in c.getVelocity()[:3])) < 0.005:
                 still_since.setdefault(c.getId(), t)

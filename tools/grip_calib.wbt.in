@@ -1,0 +1,25 @@
+#VRML_SIM R2025a utf8
+EXTERNPROTO "https://raw.githubusercontent.com/cyberbotics/webots/R2025a/projects/devices/robotiq/protos/Robotiq2f85Gripper.proto"
+WorldInfo {
+  basicTimeStep 8
+  coordinateSystem "ENU"
+  contactProperties [ ContactProperties { material1 "ROBOTIQ gripper pad" material2 "cube" coulombFriction [ 5 ] rollingFriction 0 0 0.01 softCFM 0.0001 } ]
+}
+Viewpoint { position 0.6 -0.6 0.5 orientation -0.2 0.1 0.97 2.3 }
+DEF FLOOR Solid { name "floor" children [ Shape { geometry DEF FG Plane { size 2 2 } } ] boundingObject USE FG }
+DEF TABLE Solid { translation 0 0 0.025 name "table" children [ Shape { geometry Box { size 0.3 0.3 0.05 } } ] boundingObject Box { size 0.3 0.3 0.05 } }
+DEF CUBE Solid { translation 0 0 0.07 name "cube" contactMaterial "cube" children [ Shape { geometry Box { size 0.04 0.04 0.04 } } ] boundingObject Box { size 0.04 0.04 0.04 } physics Physics { density -1 mass 0.05 } }
+Robot {
+  translation 0 0 0.5
+  name "grip_test"
+  controller "grip_calib"
+  controllerArgs [ "OUT" ]
+  supervisor TRUE
+  children [
+    SliderJoint {
+      jointParameters JointParameters { axis 0 0 -1 }
+      device [ LinearMotor { name "lift" maxVelocity 0.5 maxForce 500 minPosition -0.1 maxPosition 0.5 } PositionSensor { name "lift_sensor" } ]
+      endPoint Solid { name "carriage" physics Physics { density -1 mass 1 } children [ DEF GRIP Robotiq2f85Gripper { rotation 1 0 0 3.14159 } ] }
+    }
+  ]
+}
