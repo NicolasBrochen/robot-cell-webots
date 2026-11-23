@@ -17,7 +17,7 @@ Vidéo d'un cycle : [`docs/robot_cell.mp4`](docs/robot_cell.mp4) — avec les re
 - **Dans le navigateur :** [`site/`](site/) contient une animation 3D interactive (HTML5) d'un cycle,
   exportée par Webots (on peut tourner autour, zoomer et parcourir la ligne de temps). Publiée sur
   GitHub Pages depuis la branche `gh-pages` (`git subtree push --prefix site origin gh-pages`), elle
-  s'ouvre à l'adresse `https://<utilisateur>.github.io/robot-cell-webots/`.
+  s'ouvre à l'adresse [nicolasbrochen.github.io/robot-cell-webots](https://nicolasbrochen.github.io/robot-cell-webots/).
 - **Dans Webots :** ce dépôt *est* le dossier du projet Webots (`worlds/`, `protos/`, `controllers/`,
   `motions/`). Ouvrir [`worlds/robot_cell.wbt`](worlds/robot_cell.wbt) et lancer la simulation : la cellule
   démarre seule (aucun outil externe nécessaire). [`worlds/robot_cell_plain.wbt`](worlds/robot_cell_plain.wbt)
