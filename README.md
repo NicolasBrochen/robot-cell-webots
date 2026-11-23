@@ -1,3 +1,5 @@
+[English](README.en.md) · **Français**
+
 # Cellule robotisée SCARA + bras 6 axes avec passage de main, dans Webots
 
 Un SCARA 4 axes et un bras 6 axes se passent un cube de 50 g **directement de pince à pince, en l'air**.
