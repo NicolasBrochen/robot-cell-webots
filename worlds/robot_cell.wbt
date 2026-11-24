@@ -20,8 +20,8 @@ WorldInfo {
   ]
 }
 Viewpoint {
-  orientation -0.24 0.15 0.96 2.38
-  position 3.8 -2.9 1.40
+  orientation -0.1834 0.0741 0.9802 2.3871
+  position 5.0 -4.2 2.2
 }
 Background { skyColor [ 0.82 0.86 0.92 ] }
 DirectionalLight { direction -0.4 -0.6 -1 intensity 2.4 castShadows TRUE }

@@ -6,13 +6,19 @@ Un **FANUC LR Mate 200iD** et un **Universal Robots UR5e**, équipés chacun d'u
 se passent un cube de 50 g **directement de pince à pince, en l'air**. Un convoyeur amène les cubes un par
 un contre une butée équipée d'une barrière optique ; un automate (contrôleur superviseur du convoyeur)
 lance le cycle des deux robots quand un cube est présent. L'UR5e retourne le cube en l'air et le lâche
-dans le bac de sortie. Cadence : **un cube toutes les 14,4 s**. Construit dans
-[Webots](https://cyberbotics.com) R2025a.
+dans le bac de sortie. Cadence : **un cube toutes les 14,4 s**. Toute la cellule est montée sur un chariot
+mobile en profilés d'aluminium avec carter en plexiglas, les deux armoires de commande et les consoles
+d'apprentissage sur son étagère basse. Construit dans [Webots](https://cyberbotics.com) R2025a.
 
-![La cellule en fonctionnement](docs/cell.png)
+**▶ [Animation 3D interactive dans le navigateur](https://nicolasbrochen.github.io/robot-cell-webots/)**
+(GitHub Pages) · [vidéo d'un cycle (MP4, 1280×720)](docs/robot_cell.mp4)
 
-Vidéo d'un cycle : [`docs/robot_cell.mp4`](docs/robot_cell.mp4). La première version de la cellule, avec
-nos propres modèles de SCARA et de bras 6 axes, est étiquetée [`v1.0`](../../tree/v1.0).
+![La cellule sur son chariot mobile](docs/cell.png)
+
+[![Un cycle de production : prise en butée, passage de main en l'air, retournement, dépose dans le bac](docs/robot_cell.gif)](docs/robot_cell.mp4)
+
+La première version de la cellule, avec nos propres modèles de SCARA et de bras 6 axes, est étiquetée
+[`v1.0`](../../tree/v1.0).
 
 ## L'ouvrir
 
@@ -32,9 +38,9 @@ nos propres modèles de SCARA et de bras 6 axes, est étiquetée [`v1.0`](../../
 | FANUC LR Mate 200iD | [`protos/FanucLrMate200iD.proto`](protos/FanucLrMate200iD.proto), converti depuis [ros-industrial/fanuc](https://github.com/ros-industrial/fanuc) avec urdf2webots | prend le cube en butée et le présente au point de passage |
 | Universal Robots UR5e | PROTO officiel de Webots, sur une platine de 2 cm | prend le cube par en dessous, le retourne, le lâche dans le bac |
 | 2 × Robotiq 2F-85 | PROTO officiel de Webots, monté dans les toolSlots | pinces adaptatives à deux doigts (course 85 mm) |
-| Convoyeur d'entrée | [`protos/BeltConveyor.proto`](protos/BeltConveyor.proto) | bande de 1,12 m à 0,15 m/s, guides, butée, barrière optique 7 mm au-dessus de la bande |
+| Convoyeur d'entrée | [`protos/BeltConveyor.proto`](protos/BeltConveyor.proto) | bande de 1,12 m à 0,15 m/s, guides, butée, barrière optique 7 mm au-dessus de la bande ; pieds avant sur plateau (`z = 0`), pieds arrière descendant au sol d'atelier (`z = -1,10 m`) avec vérins de réglage et entretoises |
 | Cubes | monde | 40 mm, 50 g, 3 en circulation (recyclés du bac vers le convoyeur) |
-| Cellule mobile sur roulettes | [`protos/MobilePlexiCell.proto`](protos/MobilePlexiCell.proto) | poste de travail mobile industriel en profilés d'aluminium rainurés (45×45 mm / 40×40 mm avec rainures en T et équerres d'assemblage), 4 roulettes pivotantes avec freins, étagère inférieure technique accueillant les blocs d'alimentation/contrôleurs (FANUC R-30iB Mate Plus et UR5e Control Box) ainsi que les boîtiers d'apprentissage Teach Pendants (iPendant FANUC et tablette PolyScope UR), plateau supérieur outillé, carter intégral en plexiglas transparent (polycarbonate 6 mm), porte frontale avec sécurité et pupitre arrêt d'urgence |
+| Cellule mobile sur roulettes | [`protos/MobilePlexiCell.proto`](protos/MobilePlexiCell.proto) | poste de travail mobile industriel en profilés d'aluminium rainurés (45×45 mm / 40×40 mm avec rainures en T et équerres d'assemblage), 4 roulettes pivotantes avec freins ; dimensions identiques de 1,70 × 1,25 m de l'étagère basse au carter supérieur en plexiglas cristal (polycarbonate 6 mm, porte frontale sécurisée par interlock, pupitre arrêt d'urgence) ; étagère technique sous les robots accueillant les blocs d'alimentation/contrôleurs (baie FANUC R-30iB Mate Plus et coffret UR5e Control Box) ainsi que les consoles d'apprentissage (iPendant FANUC et tablette PolyScope UR) avec 85 cm de dégagement vertical |
 | Bac de sortie | [`protos/OutputBin.proto`](protos/OutputBin.proto) | bac récepteur des cubes |
 
 ### Le passage de main
@@ -123,6 +129,7 @@ tools/run_examples.sh                    # vérifie les mondes d'exemple
 | `tools/build_world.py` | écrit `worlds/robot_cell.wbt` |
 | `tools/calibrate.sh` | valide la cinématique face à Webots et mesure la prise de la Robotiq |
 | `tools/build_site.sh` | réenregistre l'animation HTML5 de `site/` (un cycle, Webots sans interface) |
+| `tools/build_media.sh` | réenregistre les médias du README : `docs/robot_cell.mp4`, `cell.png`, `handover.png`, `robot_cell.gif` (affichage nécessaire) |
 | `tools/build_examples.py` | écrit les mondes d'exemple 02 à 04 |
 
 ## Exemples
@@ -148,7 +155,7 @@ Construit et mis au point en pilotant Webots depuis Claude Code via le serveur M
 - Modèle FANUC : dérivé des paquets ROS-Industrial `fanuc`, licence BSD-3-Clause, voir
   [`licenses/`](licenses/) (aussi fournie avec les maillages de `site/`).
 - UR5e et Robotiq 2F-85 : PROTO de Webots (Apache 2.0), non copiés dans ce dépôt.
-- SCARA et bras 6 axes des exemples, convoyeur, bac et clôture : modèles procéduraux maison, aucune CAO
+- SCARA et bras 6 axes des exemples, convoyeur, bac, chariot mobile et carter en plexiglas : modèles procéduraux maison, aucune CAO
   constructeur.
 - FANUC, Universal Robots et Robotiq sont des marques de leurs propriétaires respectifs ; ce projet n'y est
   pas affilié. Simulation à but pédagogique : masses, efforts et serrage ne sont pas ceux des équipements

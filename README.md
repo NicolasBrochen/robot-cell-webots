@@ -6,12 +6,18 @@ A **FANUC LR Mate 200iD** and a **Universal Robots UR5e**, both fitted with a **
 pass a 50 g cube **directly from gripper to gripper, in mid-air**. A conveyor brings the cubes one by one
 against an end stop fitted with a through-beam sensor; a PLC (the supervisor controller of the conveyor)
 starts both robot cycles when a cube is present. The UR5e flips the cube in the air and drops it into the
-output bin. Throughput: **one cube every 14.4 s**. Built in [Webots](https://cyberbotics.com) R2025a.
+output bin. Throughput: **one cube every 14.4 s**. The whole cell sits on a mobile aluminium-extrusion
+cart with a plexiglass enclosure, the two robot controllers and teach pendants on its lower shelf. Built in
+[Webots](https://cyberbotics.com) R2025a.
 
-![The cell running](docs/cell.png)
+**▶ [Interactive 3D animation in the browser](https://nicolasbrochen.github.io/robot-cell-webots/)**
+(GitHub Pages) · [video of one cycle (MP4, 1280×720)](docs/robot_cell.mp4)
 
-Video of one cycle: [`docs/robot_cell.mp4`](docs/robot_cell.mp4). The first version of the cell, with our
-own SCARA and 6-axis models, is tagged [`v1.0`](../../tree/v1.0).
+![The cell on its mobile cart](docs/cell.png)
+
+[![One production cycle: pick at the end stop, in-air hand-over, flip, drop into the bin](docs/robot_cell.gif)](docs/robot_cell.mp4)
+
+The first version of the cell, with our own SCARA and 6-axis models, is tagged [`v1.0`](../../tree/v1.0).
 
 ## Open it
 
@@ -31,10 +37,10 @@ own SCARA and 6-axis models, is tagged [`v1.0`](../../tree/v1.0).
 | FANUC LR Mate 200iD | [`protos/FanucLrMate200iD.proto`](protos/FanucLrMate200iD.proto), converted from [ros-industrial/fanuc](https://github.com/ros-industrial/fanuc) with urdf2webots | picks the cube at the end stop and presents it at the hand-over point |
 | Universal Robots UR5e | official Webots PROTO, on a 2 cm plate | takes the cube from below, flips it, drops it into the bin |
 | 2 × Robotiq 2F-85 | official Webots PROTO, mounted in the toolSlots | two-finger adaptive grippers (85 mm stroke) |
-| Infeed conveyor | [`protos/BeltConveyor.proto`](protos/BeltConveyor.proto) | 1.12 m belt at 0.15 m/s, side guides, end stop, through-beam sensor 7 mm above the belt |
+| Infeed conveyor | [`protos/BeltConveyor.proto`](protos/BeltConveyor.proto) | 1.12 m belt at 0.15 m/s, side guides, end stop, through-beam sensor 7 mm above the belt; front legs rest on the cart tabletop (z = 0), rear legs extend to the workshop floor (z = -1.10 m) with leveling feet and bracing |
 | Cubes | world | 40 mm, 50 g, 3 in circulation (recycled from the bin back to the conveyor) |
-| Mobile cell cart | [`protos/MobilePlexiCell.proto`](protos/MobilePlexiCell.proto) | industrial mobile workstation constructed from T-slotted aluminum extrusion profiles (45×45 mm / 40×40 mm) with corner gusset brackets, 4 caster wheels with brakes, lower shelf hosting both robot power supplies / controllers (FANUC R-30iB Mate Plus & UR5e Control Box) and Teach Pendants (FANUC iPendant & UR PolyScope tablet), tooling tabletop, transparent plexiglass enclosure (6 mm polycarbonate), front hinged door with interlock, and emergency stop console |
-| Output bin | [`protos/OutputBin.proto`](protos/OutputBin.proto) | |
+| Mobile cell cart | [`protos/MobilePlexiCell.proto`](protos/MobilePlexiCell.proto) | industrial mobile workstation cart built from T-slotted aluminum extrusions (45×45 mm / 40×40 mm) with corner gusset brackets on 4 heavy-duty caster wheels with foot brakes; identical 1.70 × 1.25 m footprint from the lower shelf to the upper transparent plexiglass box (6 mm polycarbonate, front hinged door with interlock, E-stop pendant); lower shelf under the robots hosts the FANUC R-30iB Mate Plus & UR5e Control Box power supplies, plus both FANUC iPendant and UR PolyScope teach pendants with 85 cm vertical clearance |
+| Output bin | [`protos/OutputBin.proto`](protos/OutputBin.proto) | receives the dropped cubes |
 
 ### The hand-over
 
@@ -120,6 +126,7 @@ tools/run_examples.sh                    # checks the example worlds
 | `tools/build_world.py` | writes `worlds/robot_cell.wbt` |
 | `tools/calibrate.sh` | validates the kinematics against Webots and measures the Robotiq grasp |
 | `tools/build_site.sh` | re-records the HTML5 animation of `site/` (one cycle, headless Webots) |
+| `tools/build_media.sh` | re-records the README media: `docs/robot_cell.mp4`, `cell.png`, `handover.png`, `robot_cell.gif` (needs a display) |
 | `tools/build_examples.py` | writes the example worlds 02 to 04 |
 
 ## Examples
@@ -145,6 +152,6 @@ Built and debugged by driving Webots from Claude Code through the
 - FANUC model: derived from the ROS-Industrial `fanuc` packages, BSD-3-Clause, see
   [`licenses/`](licenses/) (also shipped with the meshes of `site/`).
 - UR5e and Robotiq 2F-85: Webots PROTOs (Apache 2.0), not copied in this repository.
-- SCARA and 6-axis arm of the examples, conveyor, bin and fence: our own procedural models, no vendor CAD.
+- SCARA and 6-axis arm of the examples, conveyor, bin, mobile cart and plexiglass enclosure: our own procedural models, no vendor CAD.
 - FANUC, Universal Robots and Robotiq are trademarks of their respective owners; this project is not
   affiliated with them. Educational simulation: masses, forces and grip are not those of the real equipment.
